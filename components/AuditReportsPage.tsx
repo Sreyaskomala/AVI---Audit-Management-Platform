@@ -15,7 +15,8 @@ const AuditReportsPage: React.FC = () => {
     const [findings, setFindings] = useState<Partial<Finding>[]>([]);
 
     const handleAddFinding = () => {
-        setFindings([...findings, { referenceDoc: '', referencePara: '', level: FindingLevel.Minor, description: '' }]);
+        // FIX: Changed FindingLevel.Minor to FindingLevel.LEVEL2 as 'Minor' is not a valid FindingLevel.
+        setFindings([...findings, { referenceDoc: '', referencePara: '', level: FindingLevel.LEVEL2, description: '' }]);
     };
 
     const handleFindingChange = (index: number, field: keyof Finding, value: any) => {

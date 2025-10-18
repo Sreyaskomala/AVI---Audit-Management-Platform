@@ -7,6 +7,8 @@ import LoginPage from './components/LoginPage';
 import AuditReportsPage from './components/AuditReportsPage';
 import CarManagementPage from './components/CarManagementPage';
 import FindingsTrackerPage from './components/FindingsTrackerPage';
+import UserManagementPage from './components/UserManagementPage';
+import ProfilePage from './components/ProfilePage';
 
 const App: React.FC = () => {
   const { currentUser, currentPage } = useAppContext();
@@ -26,6 +28,10 @@ const App: React.FC = () => {
         return <CarManagementPage />;
       case 'findings-tracker':
         return <FindingsTrackerPage />;
+      case 'user-management':
+        return <UserManagementPage />;
+      case 'profile':
+        return <ProfilePage />;
       default:
         return <Dashboard />;
     }

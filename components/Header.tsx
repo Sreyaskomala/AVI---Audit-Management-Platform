@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { SearchIcon } from './icons/SearchIcon';
 import { BellIcon } from './icons/BellIcon';
@@ -10,7 +10,19 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
-  const { currentUser, logout } = useAppContext();
+  const { currentUser, logout, setCurrentPage } = useAppContext();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   
   return (
     <header className="flex items-center justify-between px-6 py-3 bg-white border-b-2 border-gray-200 shadow-sm">
@@ -39,8 +51,8 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
           </span>
         </div>
         
-        <div className="relative group">
-          <div className="flex items-center cursor-pointer">
+        <div className="relative" ref={dropdownRef}>
+          <div className="flex items-center cursor-pointer" onClick={() => setDropdownOpen(!dropdownOpen)}>
             <img className="h-10 w-10 rounded-full object-cover" src={currentUser?.avatarUrl} alt="User avatar" />
             <div className="ml-3 hidden sm:block">
               <p className="font-semibold text-gray-800">{currentUser?.name}</p>
@@ -48,10 +60,12 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
             </div>
             <ChevronDownIcon className="h-5 w-5 text-gray-500 ml-2 hidden sm:block"/>
           </div>
-          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md overflow-hidden shadow-xl z-10 hidden group-hover:block">
-            <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
-            <button onClick={logout} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</button>
-          </div>
+          {dropdownOpen && (
+             <div className="absolute right-0 mt-2 w-48 bg-white rounded-md overflow-hidden shadow-xl z-10">
+                <button onClick={() => { setCurrentPage('profile'); setDropdownOpen(false); }} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</button>
+                <button onClick={logout} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</button>
+             </div>
+          )}
         </div>
       </div>
     </header>

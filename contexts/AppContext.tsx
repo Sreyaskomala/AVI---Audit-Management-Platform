@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { mockAudits, mockFindings, mockUsers, mockCars } from '../constants';
-import { User, Audit, Finding, CAR, UserRole, FindingStatus, AuditStatus } from '../types';
+import { User, Audit, Finding, CAR, UserRole, FindingStatus, AuditStatus, FindingLevel } from '../types';
 
 interface AppContextType {
   currentUser: User | null;
@@ -15,6 +15,10 @@ interface AppContextType {
   addAudit: (auditData: Omit<Audit, 'id' | 'auditorId'>, findingsData: Omit<Finding, 'id' | 'auditId' | 'deadline' | 'status'>[]) => void;
   submitCar: (carData: Omit<CAR, 'id' | 'submittedById' | 'submissionDate' | 'status' | 'auditId'>) => void;
   reviewCar: (carId: string, decision: 'Approved' | 'Rejected', remarks: string) => void;
+  addUser: (userData: Omit<User, 'id'>) => void;
+  updateUser: (userData: User) => void;
+  deleteUser: (userId: number) => void;
+  updateCurrentUserDetails: (details: Partial<Pick<User, 'name' | 'department' | 'avatarUrl'>>) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -37,6 +41,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const logout = () => {
     setCurrentUser(null);
+    setCurrentPage('login');
   };
   
   const addAudit = (auditData: Omit<Audit, 'id' | 'auditorId'>, newFindingsData: Omit<Finding, 'id' | 'auditId' | 'deadline' | 'status'>[]) => {
@@ -55,14 +60,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       
       const newFindings: Finding[] = newFindingsData.map((f, index) => {
           const newFindingId = `${month}${yearShort}-${String(findings.length + index + 1).padStart(3, '0')}`;
-          const deadline = new Date(auditData.date);
-          deadline.setDate(deadline.getDate() + 30); // Default 30 days
+          
+          let deadline: string | undefined = undefined;
+          
+          const getDeadline = (days: number): string => {
+              const date = new Date(auditData.date);
+              date.setDate(date.getDate() + days);
+              return date.toISOString().split('T')[0];
+          };
+
+          switch(f.level) {
+              case FindingLevel.LEVEL1:
+                  deadline = getDeadline(7);
+                  break;
+              case FindingLevel.LEVEL2:
+                  deadline = getDeadline(30);
+                  break;
+              case FindingLevel.LEVEL3:
+                  deadline = getDeadline(60);
+                  break;
+              default:
+                  deadline = undefined;
+          }
+
           return {
-              ...f,
+              ...(f as Finding),
               id: newFindingId,
               auditId: newAuditRef,
               status: FindingStatus.Open,
-              deadline: deadline.toISOString().split('T')[0],
+              deadline: deadline,
           };
       });
 
@@ -112,6 +138,36 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
   };
 
+  const addUser = (userData: Omit<User, 'id'>) => {
+      if (!currentUser || currentUser.role !== UserRole.Auditor) return;
+      const newUser: User = {
+          id: Math.max(0, ...users.map(u => u.id)) + 1,
+          ...userData,
+      };
+      setUsers(prev => [...prev, newUser]);
+  };
+
+  const updateUser = (userData: User) => {
+      if (!currentUser || currentUser.role !== UserRole.Auditor) return;
+      setUsers(prev => prev.map(u => u.id === userData.id ? userData : u));
+  };
+  
+  const deleteUser = (userId: number) => {
+      if (!currentUser || currentUser.role !== UserRole.Auditor) return;
+      if (currentUser.id === userId) {
+          alert("You cannot delete your own account.");
+          return;
+      }
+      setUsers(prev => prev.filter(u => u.id !== userId));
+  };
+
+  const updateCurrentUserDetails = (details: Partial<Pick<User, 'name' | 'department' | 'avatarUrl'>>) => {
+      if (!currentUser) return;
+      const updatedUser = { ...currentUser, ...details };
+      setCurrentUser(updatedUser);
+      setUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
+  };
+
 
   const value = {
     currentUser,
@@ -126,6 +182,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     addAudit,
     submitCar,
     reviewCar,
+    addUser,
+    updateUser,
+    deleteUser,
+    updateCurrentUserDetails,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

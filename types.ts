@@ -20,10 +20,12 @@ export enum AuditStatus {
 }
 
 export enum FindingLevel {
-    Major = 'Major Non-Conformity',
-    Minor = 'Minor Non-Conformity',
-    Observation = 'Observation',
-    OFI = 'Opportunity for Improvement'
+    LEVEL1 = 'LEVEL 1',
+    LEVEL2 = 'LEVEL 2',
+    LEVEL3 = 'LEVEL 3',
+    OBSERVATION = 'OBSERVATION',
+    RECOMMENDATION = 'RECOMMENDATION OF IMPROVEMENT',
+    COMMENT = 'COMMENT',
 }
 
 export enum FindingStatus {
@@ -42,7 +44,7 @@ export interface Finding {
   level: FindingLevel;
   description: string;
   evidence?: string;
-  deadline: string;
+  deadline?: string;
   status: FindingStatus;
   carId?: string;
 }
