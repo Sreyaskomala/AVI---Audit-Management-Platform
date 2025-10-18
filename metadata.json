@@ -1,0 +1,5 @@
+{
+  "name": "AVI - Audit Management Platform",
+  "description": "A comprehensive web-based audit management platform designed for aviation training organizations (ATOs) to manage internal audits, track findings, handle corrective action reports (CARs), and maintain compliance.",
+  "requestFramePermissions": []
+}
