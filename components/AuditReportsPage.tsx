@@ -1,11 +1,15 @@
+
 import React, { useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { AuditStatus, Finding, FindingLevel, UserRole } from '../types';
 import Modal from './shared/Modal';
+import AuditReportView from './AuditReportView'; // New component for viewing report
+import { FileTextIcon } from './icons/FileTextIcon';
 
 const AuditReportsPage: React.FC = () => {
     const { audits, users, addAudit, findings: allFindings } = useAppContext();
     const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+    const [selectedAuditId, setSelectedAuditId] = useState<string | null>(null);
     
     const [title, setTitle] = useState('');
     const [department, setDepartment] = useState('');
@@ -15,13 +19,10 @@ const AuditReportsPage: React.FC = () => {
     const [findings, setFindings] = useState<Partial<Finding>[]>([]);
 
     const handleAddFinding = () => {
-        // FIX: Changed FindingLevel.Minor to FindingLevel.LEVEL2 as 'Minor' is not a valid FindingLevel.
         setFindings([...findings, { referenceDoc: '', referencePara: '', level: FindingLevel.LEVEL2, description: '' }]);
     };
 
     const handleFindingChange = (index: number, field: keyof Finding, value: any) => {
-        // FIX: The direct assignment was causing a TypeScript error and mutating state.
-        // Creating a new object for the updated finding solves both issues.
         const newFindings = [...findings];
         newFindings[index] = {
             ...newFindings[index],
@@ -73,6 +74,7 @@ const AuditReportsPage: React.FC = () => {
                                 <th className="px-6 py-3">Date</th>
                                 <th className="px-6 py-3">Findings</th>
                                 <th className="px-6 py-3">Status</th>
+                                <th className="px-6 py-3">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -89,6 +91,11 @@ const AuditReportsPage: React.FC = () => {
                                     <td className="px-6 py-4">{new Date(audit.date).toLocaleDateString()}</td>
                                     <td className="px-6 py-4">{getFindingCounts(audit.id)}</td>
                                     <td className="px-6 py-4">{audit.status}</td>
+                                    <td className="px-6 py-4">
+                                        <button onClick={() => setSelectedAuditId(audit.id)} className="text-primary hover:underline flex items-center gap-1">
+                                           <FileTextIcon className="h-4 w-4" /> View Report
+                                        </button>
+                                    </td>
                                 </tr>
                                 )
                             })}
@@ -96,6 +103,12 @@ const AuditReportsPage: React.FC = () => {
                     </table>
                 </div>
             </div>
+
+            {selectedAuditId && (
+                <Modal size="4xl" title={`Audit Report: ${selectedAuditId}`} onClose={() => setSelectedAuditId(null)}>
+                    <AuditReportView auditId={selectedAuditId} />
+                </Modal>
+            )}
 
             {isCreateModalOpen && (
                 <Modal title="Create New Audit Report" onClose={() => setCreateModalOpen(false)}>

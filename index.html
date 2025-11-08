@@ -33,12 +33,41 @@
         },
       }
     </script>
+    <style>
+      @media print {
+        body {
+          background-color: white;
+        }
+        .modal-content-area {
+          overflow: visible !important;
+          max-height: none !important;
+          padding: 0 !important;
+        }
+        .modal-wrapper, .modal-wrapper * {
+          visibility: hidden;
+        }
+        #audit-report-content, #audit-report-content * {
+          visibility: visible;
+        }
+        #audit-report-content {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          padding: 1rem;
+        }
+        .no-print {
+          display: none !important;
+        }
+      }
+    </style>
   <script type="importmap">
 {
   "imports": {
     "react": "https://aistudiocdn.com/react@^19.2.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.0"
   }
 }
 </script>

@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { mockAudits, mockFindings, mockUsers, mockCars } from '../constants';
 import { User, Audit, Finding, CAR, UserRole, FindingStatus, AuditStatus, FindingLevel } from '../types';
@@ -15,10 +16,10 @@ interface AppContextType {
   addAudit: (auditData: Omit<Audit, 'id' | 'auditorId'>, findingsData: Omit<Finding, 'id' | 'auditId' | 'deadline' | 'status'>[]) => void;
   submitCar: (carData: Omit<CAR, 'id' | 'submittedById' | 'submissionDate' | 'status' | 'auditId'>) => void;
   reviewCar: (carId: string, decision: 'Approved' | 'Rejected', remarks: string) => void;
-  addUser: (userData: Omit<User, 'id'>) => void;
+  addUser: (userData: Omit<User, 'id' | 'avatarUrl'>) => void;
   updateUser: (userData: User) => void;
   deleteUser: (userId: number) => void;
-  updateCurrentUserDetails: (details: Partial<Pick<User, 'name' | 'department' | 'avatarUrl'>>) => void;
+  updateCurrentUserDetails: (details: Partial<Pick<User, 'name' | 'department'>>) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -138,18 +139,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
   };
 
-  const addUser = (userData: Omit<User, 'id'>) => {
+  const addUser = (userData: Omit<User, 'id' | 'avatarUrl'>) => {
       if (!currentUser || currentUser.role !== UserRole.Auditor) return;
       const newUser: User = {
           id: Math.max(0, ...users.map(u => u.id)) + 1,
           ...userData,
+          avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random&color=fff`,
       };
       setUsers(prev => [...prev, newUser]);
   };
 
   const updateUser = (userData: User) => {
       if (!currentUser || currentUser.role !== UserRole.Auditor) return;
-      setUsers(prev => prev.map(u => u.id === userData.id ? userData : u));
+      const oldUser = users.find(u => u.id === userData.id);
+      let newAvatarUrl = userData.avatarUrl;
+      if (oldUser && oldUser.name !== userData.name) {
+          newAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random&color=fff`;
+      }
+      setUsers(prev => prev.map(u => u.id === userData.id ? {...userData, avatarUrl: newAvatarUrl} : u));
   };
   
   const deleteUser = (userId: number) => {
@@ -161,9 +168,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setUsers(prev => prev.filter(u => u.id !== userId));
   };
 
-  const updateCurrentUserDetails = (details: Partial<Pick<User, 'name' | 'department' | 'avatarUrl'>>) => {
+  const updateCurrentUserDetails = (details: Partial<Pick<User, 'name' | 'department'>>) => {
       if (!currentUser) return;
-      const updatedUser = { ...currentUser, ...details };
+      let newAvatarUrl = currentUser.avatarUrl;
+      if (details.name && details.name !== currentUser.name) {
+          newAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(details.name)}&background=random&color=fff`;
+      }
+      const updatedUser = { ...currentUser, ...details, avatarUrl: newAvatarUrl };
       setCurrentUser(updatedUser);
       setUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
   };

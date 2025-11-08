@@ -1,3 +1,4 @@
+
 import React from 'react';
 import MetricCard from './MetricCard';
 import RecentAuditsTable from './RecentAuditsTable';
@@ -46,7 +47,7 @@ const Dashboard: React.FC = () => {
                 <button onClick={() => setCurrentPage('findings-tracker')} className="bg-white hover:bg-gray-100 text-gray-800 font-bold py-2 px-4 rounded-lg border border-gray-300 shadow-sm transition-transform transform hover:scale-105">
                     Track Findings
                 </button>
-                <button className="bg-white hover:bg-gray-100 text-gray-800 font-bold py-2 px-4 rounded-lg border border-gray-300 shadow-sm transition-transform transform hover:scale-105">
+                <button onClick={() => setCurrentPage('audit-reports')} className="bg-white hover:bg-gray-100 text-gray-800 font-bold py-2 px-4 rounded-lg border border-gray-300 shadow-sm transition-transform transform hover:scale-105">
                     Generate Report
                 </button>
             </div>

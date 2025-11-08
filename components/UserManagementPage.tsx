@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { User, UserRole } from '../types';
@@ -14,18 +15,17 @@ const UserManagementPage: React.FC = () => {
         name: '',
         department: '',
         role: UserRole.Auditee,
-        avatarUrl: '',
     });
 
     const openCreateModal = () => {
         setEditingUser(null);
-        setFormData({ name: '', department: '', role: UserRole.Auditee, avatarUrl: `https://i.pravatar.cc/150?u=${Date.now()}` });
+        setFormData({ name: '', department: '', role: UserRole.Auditee });
         setModalOpen(true);
     };
 
     const openEditModal = (user: User) => {
         setEditingUser(user);
-        setFormData({ name: user.name, department: user.department, role: user.role, avatarUrl: user.avatarUrl });
+        setFormData({ name: user.name, department: user.department, role: user.role });
         setModalOpen(true);
     };
 
@@ -130,10 +130,6 @@ const UserManagementPage: React.FC = () => {
                                     <option key={role} value={role}>{role}</option>
                                 ))}
                             </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium">Avatar URL</label>
-                            <input type="text" name="avatarUrl" value={formData.avatarUrl} onChange={handleChange} className="mt-1 w-full border border-gray-300 rounded-md p-2" required />
                         </div>
                         <div className="flex justify-end space-x-4 pt-4">
                             <button type="button" onClick={handleCloseModal} className="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg">Cancel</button>

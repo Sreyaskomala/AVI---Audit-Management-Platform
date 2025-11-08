@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { User } from '../types';
@@ -6,19 +7,17 @@ const ProfilePage: React.FC = () => {
     const { currentUser, updateCurrentUserDetails } = useAppContext();
     const [name, setName] = useState('');
     const [department, setDepartment] = useState('');
-    const [avatarUrl, setAvatarUrl] = useState('');
 
     useEffect(() => {
         if (currentUser) {
             setName(currentUser.name);
             setDepartment(currentUser.department);
-            setAvatarUrl(currentUser.avatarUrl);
         }
     }, [currentUser]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        updateCurrentUserDetails({ name, department, avatarUrl });
+        updateCurrentUserDetails({ name, department });
         alert('Profile updated successfully!');
     };
 
@@ -31,18 +30,9 @@ const ProfilePage: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-800 mb-6">My Profile</h1>
             <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg">
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="flex items-center space-x-6">
-                        <img src={avatarUrl} alt="User Avatar" className="h-24 w-24 rounded-full object-cover" />
-                        <div className="flex-1">
-                            <label htmlFor="avatarUrl" className="block text-sm font-medium text-gray-700">Avatar URL</label>
-                            <input
-                                id="avatarUrl"
-                                type="text"
-                                value={avatarUrl}
-                                onChange={(e) => setAvatarUrl(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                            />
-                        </div>
+                    <div className="flex flex-col items-center space-y-4">
+                        <img src={currentUser.avatarUrl} alt="User Avatar" className="h-24 w-24 rounded-full object-cover" />
+                         <p className="text-sm text-gray-500">Avatar is automatically generated from your name.</p>
                     </div>
                      <div>
                         <label htmlFor="name" className="block text-sm font-medium text-gray-700">Full Name</label>
