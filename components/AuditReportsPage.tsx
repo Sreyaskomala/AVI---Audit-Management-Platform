@@ -26,7 +26,7 @@ const AuditReportsPage: React.FC = () => {
         setCreateModalOpen(true);
     }
     
-    // Find editing audit object
+    // Find editing audit object and its findings
     const editingAudit = audits.find(a => a.id === editingAuditId);
     const editingFindings = allFindings.filter(f => f.auditId === editingAuditId);
 
@@ -66,7 +66,7 @@ const AuditReportsPage: React.FC = () => {
                                 const auditor = users.find(u => u.id === audit.auditorId);
                                 const isExternal = audit.type === AuditType.External;
                                 return (
-                                <tr key={audit.id} className="bg-white border-b hover:bg-gray-50">
+                                <tr key={audit.id} className={`bg-white border-b hover:bg-gray-50 ${audit.status === AuditStatus.Draft ? 'bg-gray-50' : ''}`}>
                                     <td className="px-6 py-4 font-medium">{audit.id}</td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 rounded text-xs font-bold ${isExternal ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
@@ -96,19 +96,22 @@ const AuditReportsPage: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4 text-center">{getFindingCounts(audit.id)}</td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 rounded text-xs font-bold ${audit.status === AuditStatus.Draft ? 'bg-gray-200 text-gray-700 italic' : 'bg-green-100 text-green-800'}`}>
+                                        <span className={`px-2 py-1 rounded text-xs font-bold ${audit.status === AuditStatus.Draft ? 'bg-gray-200 text-gray-700 border border-gray-400 border-dashed' : 'bg-green-100 text-green-800'}`}>
                                             {audit.status}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex gap-3">
                                             {audit.status === AuditStatus.Draft && canCreateAudit ? (
-                                                <button onClick={() => handleEditDraft(audit.id)} className="text-blue-600 hover:underline flex items-center gap-1">
-                                                   <EditIcon className="h-4 w-4" /> Edit
+                                                <button 
+                                                    onClick={() => handleEditDraft(audit.id)} 
+                                                    className="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-3 py-1 rounded-md flex items-center gap-1 font-semibold text-xs"
+                                                >
+                                                   <EditIcon className="h-4 w-4" /> Resume Editing
                                                 </button>
                                             ) : (
                                                 <button onClick={() => setSelectedAuditId(audit.id)} className="text-primary hover:underline flex items-center gap-1">
-                                                   <FileTextIcon className="h-4 w-4" /> View
+                                                   <FileTextIcon className="h-4 w-4" /> View Report
                                                 </button>
                                             )}
                                         </div>

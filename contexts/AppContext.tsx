@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { mockAudits, mockFindings, mockUsers, mockCars } from '../constants';
 import { User, Audit, Finding, CAR, UserRole, FindingStatus, AuditStatus, FindingLevel, AuditType, ExtensionStatus } from '../types';
 
@@ -10,9 +10,11 @@ interface AppContextType {
   findings: Finding[];
   cars: CAR[];
   users: User[];
+  theme: 'light' | 'dark';
   login: (userId: number) => void;
   logout: () => void;
   setCurrentPage: (page: string) => void;
+  toggleTheme: () => void;
   addAudit: (auditData: Omit<Audit, 'id' | 'auditorId'>, findingsData: Omit<Finding, 'id' | 'auditId' | 'deadline' | 'status'>[]) => void;
   updateAudit: (auditId: string, auditData: Partial<Audit>, findingsData: Finding[]) => void;
   submitCar: (carData: Omit<CAR, 'id' | 'submittedById' | 'submissionDate' | 'status' | 'auditId'>) => void;
@@ -34,6 +36,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [audits, setAudits] = useState<Audit[]>(mockAudits);
   const [findings, setFindings] = useState<Finding[]>(mockFindings);
   const [cars, setCars] = useState<CAR[]>(mockCars);
+  
+  // Theme State
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+      if (typeof window !== 'undefined') {
+          return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
+      }
+      return 'light';
+  });
+
+  useEffect(() => {
+      const root = window.document.documentElement;
+      if (theme === 'dark') {
+          root.classList.add('dark');
+      } else {
+          root.classList.remove('dark');
+      }
+      localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+      setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
 
   const login = (userId: number) => {
     const user = users.find(u => u.id === userId);
@@ -108,10 +132,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setAudits(prev => prev.map(a => a.id === auditId ? { ...a, ...auditData } : a));
 
       // Update Findings:
-      // 1. Remove old findings for this audit that are not in the new list (if needed, but simpler to just upsert)
-      // 2. Update existing ones
-      // 3. Add new ones
-      
       // Strategy: Remove all old findings for this audit and re-add the new list. 
       // NOTE: This assumes we are in Draft/Editing mode where no CARs exist yet.
       
@@ -267,9 +287,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     findings,
     cars,
     users,
+    theme,
     login,
     logout,
     setCurrentPage,
+    toggleTheme,
     addAudit,
     updateAudit,
     submitCar,

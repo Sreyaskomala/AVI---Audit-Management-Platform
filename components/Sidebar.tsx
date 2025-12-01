@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BarChartIcon } from './icons/BarChartIcon';
 import { FileTextIcon } from './icons/FileTextIcon';
@@ -33,7 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
             className={`flex items-center w-full px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 text-left ${
                 currentPage === pageKey
                     ? 'bg-primary text-white shadow-lg'
-                    : 'text-gray-600 hover:bg-gray-200'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
         >
             {icon}
@@ -47,17 +48,17 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
             <div className={`fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`} onClick={() => setSidebarOpen(false)}></div>
 
             {/* Sidebar */}
-            <aside className={`fixed inset-y-0 left-0 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out w-64 bg-white border-r-2 border-gray-200 shadow-xl z-30 flex flex-col`}>
-                <div className="flex items-center justify-between p-4 border-b-2 border-gray-200">
+            <aside className={`fixed inset-y-0 left-0 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out w-64 bg-white dark:bg-gray-800 border-r-2 border-gray-200 dark:border-gray-700 shadow-xl z-30 flex flex-col`}>
+                <div className="flex items-center justify-between p-4 border-b-2 border-gray-200 dark:border-gray-700">
                     <div className="flex items-center">
                         <svg className="h-10 w-10 text-primary" viewBox="0 0 512 512" fill="currentColor">
                            <path d="M435.8,69.47,256,169.47,76.2,69.47,256,10,435.8,69.47Z"/>
                            <path d="M448,102.53,256,214.67,64,102.53v109l192,112.14,192-112.14V102.53Z"/>
                            <path d="M448,244.67,256,356.8,64,244.67v109L256,465.8,448,353.67V244.67Z"/>
                         </svg>
-                        <h1 className="text-2xl font-bold text-gray-800 ml-2">AVI</h1>
+                        <h1 className="text-2xl font-bold text-gray-800 dark:text-white ml-2">AVI</h1>
                     </div>
-                    <button onClick={() => setSidebarOpen(false)} className="text-gray-500 focus:outline-none lg:hidden">
+                    <button onClick={() => setSidebarOpen(false)} className="text-gray-500 dark:text-gray-400 focus:outline-none lg:hidden">
                         <XIcon className="h-6 w-6" />
                     </button>
                 </div>
@@ -76,7 +77,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
                    )}
                 </nav>
                 
-                <div className="px-4 py-4 border-t-2 border-gray-200 space-y-2">
+                <div className="px-4 py-4 border-t-2 border-gray-200 dark:border-gray-700 space-y-2">
                    {currentUser?.role === UserRole.Auditor && (
                         <NavLink icon={<UsersIcon className="h-5 w-5" />} text="User Management" pageKey="user-management" />
                    )}

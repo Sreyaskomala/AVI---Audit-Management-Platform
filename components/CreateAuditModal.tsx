@@ -31,7 +31,7 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
     useEffect(() => {
         if (isOpen) {
             if (existingAudit) {
-                // Populate form for editing
+                // Populate form for editing existing draft
                 setTitle(existingAudit.title);
                 setDepartment(existingAudit.department);
                 setDate(existingAudit.date);
@@ -41,9 +41,10 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
                 setExternalEntity(existingAudit.externalEntity || '');
                 setLocation(existingAudit.location || Location.GURUGRAM_1);
                 setFstdId(existingAudit.fstdId || '');
-                setFindings(existingFindings || []);
+                // Deep copy findings to avoid mutating context directly before save
+                setFindings(existingFindings ? existingFindings.map(f => ({...f})) : []);
             } else {
-                // Reset/Init for new
+                // Reset/Init for new audit
                 setDate(initialDate || new Date().toISOString().split('T')[0]);
                 setTitle(''); setDepartment(''); 
                 setFindings([]); setAuditType(AuditType.Internal); 
@@ -107,7 +108,7 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
 
         const auditee = users.find(u => u.department === department && u.role === UserRole.Auditee);
         if (!auditee) {
-            alert('No Auditee found for the selected department. Please create a user for this department first.');
+            alert(`No Auditee user found for the '${department}' department. Please create a user for this department first in User Management.`);
             return;
         }
 
@@ -118,7 +119,7 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
              date, 
              additionalDates: additionalDates.filter(d => d),
              reportDate,
-             status: targetStatus, // Draft or CARPending
+             status: targetStatus, // This determines if it's Draft or CARPending
              type: auditType,
              externalEntity: auditType === AuditType.External ? externalEntity : undefined,
              location,
@@ -126,8 +127,10 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
         };
 
         if (existingAudit) {
+            // Update existing Draft
             updateAudit(existingAudit.id, auditPayload, findings as Finding[]);
         } else {
+            // Create New
             addAudit(auditPayload, findings as Omit<Finding, 'id' | 'auditId' | 'deadline' | 'status'>[]);
         }
         
@@ -135,48 +138,48 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
     };
 
     return (
-        <Modal size="custom-xl" title={existingAudit ? `Edit Audit: ${existingAudit.id}` : "Create New Audit Report"} onClose={onClose}>
+        <Modal size="custom-xl" title={existingAudit ? `Edit Draft Audit: ${existingAudit.id}` : "Create New Audit Report"} onClose={onClose}>
             <form className="space-y-6">
                 
                 {/* Audit Type Selection */}
                 <div className="bg-gray-50 p-4 rounded-md border border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium mb-2">Audit Type</label>
+                        <label className="block text-sm font-medium mb-2 text-gray-700">Audit Type</label>
                         <div className="flex gap-4">
-                            <label className="flex items-center space-x-2 cursor-pointer">
+                            <label className="flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-white hover:shadow-sm transition-all">
                                 <input 
                                     type="radio" 
                                     name="auditType" 
                                     value={AuditType.Internal}
                                     checked={auditType === AuditType.Internal} 
                                     onChange={() => setAuditType(AuditType.Internal)}
-                                    className="text-primary focus:ring-primary"
+                                    className="text-primary focus:ring-primary h-4 w-4"
                                 />
-                                <span>Internal Audit</span>
+                                <span className="font-medium">Internal Audit</span>
                             </label>
-                            <label className="flex items-center space-x-2 cursor-pointer">
+                            <label className="flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-white hover:shadow-sm transition-all">
                                 <input 
                                     type="radio" 
                                     name="auditType" 
                                     value={AuditType.External}
                                     checked={auditType === AuditType.External} 
                                     onChange={() => setAuditType(AuditType.External)}
-                                    className="text-primary focus:ring-primary"
+                                    className="text-primary focus:ring-primary h-4 w-4"
                                 />
-                                <span>External Audit</span>
+                                <span className="font-medium">External Audit</span>
                             </label>
                         </div>
                     </div>
                     
                     {auditType === AuditType.External && (
                         <div>
-                            <label className="block text-sm font-medium">External Entity / Authority Name</label>
+                            <label className="block text-sm font-medium text-purple-700">External Entity / Authority Name</label>
                             <input 
                                 type="text" 
                                 value={externalEntity} 
                                 onChange={e => setExternalEntity(e.target.value)} 
                                 placeholder="e.g., EASA, FAA, CAA"
-                                className="mt-1 w-full border border-gray-300 rounded-md p-2" 
+                                className="mt-1 w-full border border-purple-300 rounded-md p-2 focus:border-purple-500 focus:ring-purple-200" 
                                 required 
                             />
                         </div>
@@ -186,11 +189,11 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
                 {/* General Info Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label className="block text-sm font-medium">Audit Title</label>
+                        <label className="block text-sm font-medium text-gray-700">Audit Title</label>
                         <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required />
                     </div>
-                        <div>
-                        <label className="block text-sm font-medium">Department (Auditee)</label>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Department (Auditee)</label>
                         <select value={department} onChange={e => setDepartment(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required>
                             <option value="">Select Department</option>
                             {[...new Set(users.filter(u => u.role === UserRole.Auditee).map(u => u.department))].map(dept => (
@@ -199,7 +202,7 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium">Location</label>
+                        <label className="block text-sm font-medium text-gray-700">Location</label>
                         <select value={location} onChange={e => setLocation(e.target.value as Location)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required>
                             {Object.values(Location).map(loc => (
                                 <option key={loc} value={loc}>{loc}</option>
@@ -210,7 +213,7 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
                     {/* Conditional FSTD Dropdown */}
                     {department === 'Engineering' && (
                         <div>
-                            <label className="block text-sm font-medium">FSTD (Optional)</label>
+                            <label className="block text-sm font-medium text-gray-700">FSTD (Optional)</label>
                             <select value={fstdId} onChange={e => setFstdId(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2">
                                 <option value="">Select FSTD...</option>
                                 {FSTD_OPTIONS.map(opt => (
@@ -224,35 +227,41 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
                 {/* Dates Section */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t pt-4">
                     <div>
-                        <h3 className="text-sm font-semibold mb-2">Audit Execution Dates</h3>
+                        <h3 className="text-sm font-semibold mb-2 text-gray-700">Audit Execution Dates</h3>
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
                                 <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-gray-300 rounded-md p-2" required />
-                                <span className="text-xs text-gray-500">Day 1</span>
+                                <span className="text-xs text-gray-500 font-medium w-12">Day 1</span>
                             </div>
                             {additionalDates.map((d, idx) => (
                                 <div key={idx} className="flex items-center gap-2">
                                     <input type="date" value={d} onChange={e => updateAdditionalDate(idx, e.target.value)} className="w-full border border-gray-300 rounded-md p-2" required />
-                                    <button type="button" onClick={() => setAdditionalDates(additionalDates.filter((_, i) => i !== idx))} className="text-red-500 text-xs">Remove</button>
+                                    <span className="text-xs text-gray-500 font-medium w-12">Day {idx + 2}</span>
+                                    <button type="button" onClick={() => setAdditionalDates(additionalDates.filter((_, i) => i !== idx))} className="text-red-500 text-xs hover:text-red-700 font-bold p-1">X</button>
                                 </div>
                             ))}
-                            <button type="button" onClick={addDate} className="text-sm text-primary hover:underline">+ Add Another Date</button>
+                            <button type="button" onClick={addDate} className="text-sm text-primary hover:underline font-medium">+ Add Another Date</button>
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium">Report Date</label>
+                        <label className="block text-sm font-medium text-gray-700">Report Date</label>
                         <input type="date" value={reportDate} onChange={e => setReportDate(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required />
                         <p className="text-xs text-gray-500 mt-1">The date this report is finalized.</p>
                     </div>
                 </div>
 
                 <hr />
-                <h3 className="text-lg font-semibold">Findings</h3>
+                <h3 className="text-lg font-semibold text-gray-800">Findings</h3>
+                {findings.length === 0 && (
+                    <div className="text-center py-8 bg-gray-50 border border-dashed rounded-md text-gray-500">
+                        No findings added yet. Click the button below to add one.
+                    </div>
+                )}
                 {findings.map((finding, index) => (
-                        <div key={index} className="p-4 border rounded-md space-y-4 bg-gray-50">
+                        <div key={index} className="p-4 border rounded-md space-y-4 bg-gray-50 relative group">
                         <div className="flex justify-between items-center">
-                            <h4 className="font-medium text-gray-700">Finding #{index + 1}</h4>
-                            <button type="button" onClick={() => setFindings(findings.filter((_, i) => i !== index))} className="text-red-500 text-xs hover:underline">Remove Finding</button>
+                            <h4 className="font-bold text-gray-700">Finding #{index + 1}</h4>
+                            <button type="button" onClick={() => setFindings(findings.filter((_, i) => i !== index))} className="text-red-500 text-sm hover:text-red-700 font-medium">Remove Finding</button>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -265,60 +274,60 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
                                         placeholder="e.g., EXT-2025-001"
                                         value={finding.customId} 
                                         onChange={e => handleFindingChange(index, 'customId', e.target.value)} 
-                                        className="mt-1 w-full border border-purple-300 rounded-md p-2 bg-purple-50" 
+                                        className="mt-1 w-full border border-purple-300 rounded-md p-2 bg-purple-50 focus:border-purple-500 focus:ring-purple-200" 
                                     />
                                 </div>
                             )}
 
                             <div>
-                                <label className="block text-sm">Reference Document</label>
-                                <input type="text" value={finding.referenceDoc} onChange={e => handleFindingChange(index, 'referenceDoc', e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required />
+                                <label className="block text-sm font-medium text-gray-700">Reference Document</label>
+                                <input type="text" value={finding.referenceDoc} onChange={e => handleFindingChange(index, 'referenceDoc', e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" placeholder="e.g. CAR-147" required />
                             </div>
                             <div>
-                                <label className="block text-sm">Reference Clause</label>
-                                <input type="text" value={finding.referencePara} onChange={e => handleFindingChange(index, 'referencePara', e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required />
+                                <label className="block text-sm font-medium text-gray-700">Reference Clause</label>
+                                <input type="text" value={finding.referencePara} onChange={e => handleFindingChange(index, 'referencePara', e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" placeholder="e.g. 147.A.100" required />
                             </div>
                             <div>
-                                <label className="block text-sm">Finding Level</label>
+                                <label className="block text-sm font-medium text-gray-700">Finding Level</label>
                                 <select value={finding.level} onChange={e => handleFindingChange(index, 'level', e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required>
                                     {Object.values(FindingLevel).map(level => <option key={level} value={level}>{level}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm">Evidence Attachments</label>
-                                <input type="file" onChange={(e) => handleFileUpload(index, e)} className="mt-1 w-full text-sm text-gray-500" />
+                                <label className="block text-sm font-medium text-gray-700">Evidence Attachments</label>
+                                <input type="file" onChange={(e) => handleFileUpload(index, e)} className="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
                                 {finding.attachments && finding.attachments.length > 0 && (
-                                    <div className="mt-1 text-xs text-blue-600">
+                                    <div className="mt-1 text-xs text-blue-600 font-medium">
                                         Attached: {finding.attachments.map(a => a.name).join(', ')}
                                     </div>
                                 )}
                             </div>
                             <div className="col-span-2">
-                                <label className="block text-sm">Description</label>
-                                <textarea value={finding.description} onChange={e => handleFindingChange(index, 'description', e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" rows={3} required />
+                                <label className="block text-sm font-medium text-gray-700">Description</label>
+                                <textarea value={finding.description} onChange={e => handleFindingChange(index, 'description', e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" rows={3} placeholder="Describe the non-compliance..." required />
                             </div>
                         </div>
                         </div>
                 ))}
                 
-                <button type="button" onClick={handleAddFinding} className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-primary hover:text-primary transition-colors">
-                    + Add Another Finding
+                <button type="button" onClick={handleAddFinding} className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 font-medium hover:border-primary hover:text-primary hover:bg-gray-50 transition-all">
+                    + Add New Finding
                 </button>
                 
-                <div className="flex justify-between items-center pt-4 border-t">
-                     <button type="button" onClick={onClose} className="text-gray-600 font-semibold hover:text-gray-900">Cancel</button>
-                     <div className="flex space-x-4">
+                <div className="flex justify-between items-center pt-6 border-t">
+                     <button type="button" onClick={onClose} className="text-gray-600 font-semibold hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-100">Cancel</button>
+                     <div className="flex space-x-3">
                         <button 
                             type="button" 
                             onClick={(e) => handleSave(e, AuditStatus.Draft)} 
-                            className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow"
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-6 rounded-lg border border-gray-300 shadow-sm transition-colors"
                         >
-                            Save Draft
+                            Save as Draft
                         </button>
                         <button 
                             type="button" 
                             onClick={(e) => handleSave(e, AuditStatus.CARPending)} 
-                            className="bg-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-primary-dark"
+                            className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
                         >
                             Finalize & Submit Report
                         </button>

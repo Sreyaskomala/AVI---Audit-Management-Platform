@@ -33,13 +33,13 @@ const Dashboard: React.FC = () => {
   return (
     <div className="container mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Dashboard</h1>
           <div className="mt-4 md:mt-0">
-              <label className="mr-2 text-gray-600 font-medium">Filter Location:</label>
+              <label className="mr-2 text-gray-600 dark:text-gray-300 font-medium">Filter Location:</label>
               <select 
                 value={selectedLocation} 
                 onChange={(e) => setSelectedLocation(e.target.value)} 
-                className="border border-gray-300 rounded-md p-2 bg-white focus:ring-primary focus:border-primary"
+                className="border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary"
               >
                   <option value="All">All Locations</option>
                   {Object.values(Location).map(loc => (
@@ -62,21 +62,21 @@ const Dashboard: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           {/* Quick Actions */}
           <div>
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">Quick Actions</h2>
+            <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4">Quick Actions</h2>
             <div className="flex flex-wrap gap-4">
                 {canCreateAudit && (
                     <button onClick={() => setCurrentPage('audit-reports')} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
                         Create New Audit
                     </button>
                 )}
-                <button onClick={() => setCurrentPage('car-management')} className="bg-white hover:bg-gray-100 text-gray-800 font-bold py-2 px-4 rounded-lg border border-gray-300 shadow-sm transition-transform transform hover:scale-105">
+                <button onClick={() => setCurrentPage('car-management')} className="bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-2 px-4 rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm transition-transform transform hover:scale-105">
                     Submit CAR
                 </button>
-                <button onClick={() => setCurrentPage('findings-tracker')} className="bg-white hover:bg-gray-100 text-gray-800 font-bold py-2 px-4 rounded-lg border border-gray-300 shadow-sm transition-transform transform hover:scale-105">
+                <button onClick={() => setCurrentPage('findings-tracker')} className="bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-2 px-4 rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm transition-transform transform hover:scale-105">
                     Track Findings
                 </button>
                 {canCreateAudit && (
-                    <button onClick={() => setCurrentPage('audit-reports')} className="bg-white hover:bg-gray-100 text-gray-800 font-bold py-2 px-4 rounded-lg border border-gray-300 shadow-sm transition-transform transform hover:scale-105">
+                    <button onClick={() => setCurrentPage('audit-reports')} className="bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-2 px-4 rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm transition-transform transform hover:scale-105">
                         Generate Report
                     </button>
                 )}

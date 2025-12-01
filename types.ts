@@ -30,7 +30,7 @@ export enum Location {
     GURUGRAM_1 = 'Gurugram 1',
     GURUGRAM_2 = 'Gurugram 2',
     HYDERABAD = 'Hyderabad',
-    MUMBAI_PLANNING = 'Mumbai (Planning)',
+    MUMBAI= 'Mumbai ',
 }
 
 export enum FindingLevel {
