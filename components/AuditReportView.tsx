@@ -191,6 +191,11 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
                                                         {new Date(finding.requestedDeadline!).toLocaleDateString()}
                                                     </span>
                                                 )}
+                                                {finding.extensionStatus === ExtensionStatus.Approved && (
+                                                    <div className="text-xs mt-1 bg-green-50 text-green-700 p-1 rounded border border-green-200 inline-block">
+                                                        <span className="italic text-gray-500">Reason: {finding.extensionReason}</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                         <p className="mb-2"><strong>Description:</strong> {finding.description}</p>

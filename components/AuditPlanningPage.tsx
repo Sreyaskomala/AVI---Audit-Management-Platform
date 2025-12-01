@@ -1,12 +1,20 @@
 
 import React, { useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
-import { AuditStatus } from '../types';
+import { AuditStatus, UserRole } from '../types';
 import { ChevronDownIcon } from './icons/ChevronDownIcon';
+import CreateAuditModal from './CreateAuditModal';
+import Modal from './shared/Modal';
+import AuditReportView from './AuditReportView';
 
 const AuditPlanningPage: React.FC = () => {
-    const { audits } = useAppContext();
+    const { audits, currentUser } = useAppContext();
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+    const [selectedDate, setSelectedDate] = useState<string>('');
+    const [selectedAuditId, setSelectedAuditId] = useState<string | null>(null);
+
+    const canCreateAudit = currentUser?.role === UserRole.Auditor || currentUser?.department === 'Quality';
 
     const months = [
         "January", "February", "March", "April", "May", "June",
@@ -27,6 +35,18 @@ const AuditPlanningPage: React.FC = () => {
 
     const nextMonth = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    };
+
+    const handleDayClick = (day: number) => {
+        if (!canCreateAudit) return;
+        const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        setSelectedDate(dateStr);
+        setCreateModalOpen(true);
+    };
+
+    const handleAuditClick = (e: React.MouseEvent, auditId: string) => {
+        e.stopPropagation();
+        setSelectedAuditId(auditId);
     };
 
     const renderCalendarDays = () => {
@@ -51,23 +71,31 @@ const AuditPlanningPage: React.FC = () => {
             });
 
             days.push(
-                <div key={d} className="h-32 border border-gray-200 bg-white p-2 overflow-y-auto hover:bg-blue-50 transition-colors">
+                <div 
+                    key={d} 
+                    onClick={() => handleDayClick(d)}
+                    className={`h-32 border border-gray-200 bg-white p-2 overflow-y-auto transition-colors group relative ${canCreateAudit ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                >
                     <div className="flex justify-between items-start">
                         <span className={`text-sm font-bold ${daysAudits.length > 0 ? 'text-blue-600' : 'text-gray-400'}`}>{d}</span>
-                        {daysAudits.length > 0 && <span className="h-2 w-2 rounded-full bg-blue-500"></span>}
+                        {canCreateAudit && (
+                            <span className="hidden group-hover:block absolute top-2 right-2 text-xs text-blue-500 font-medium">+ Schedule</span>
+                        )}
+                        {daysAudits.length > 0 && !canCreateAudit && <span className="h-2 w-2 rounded-full bg-blue-500"></span>}
                     </div>
                     <div className="mt-1 space-y-1">
                         {daysAudits.map((audit, idx) => (
                             <div 
                                 key={`${audit.id}-${idx}`} 
-                                className={`text-xs p-1 rounded truncate cursor-help border-l-2 ${
+                                onClick={(e) => handleAuditClick(e, audit.id)}
+                                className={`text-xs p-1 rounded truncate cursor-pointer hover:opacity-80 border-l-2 shadow-sm ${
                                     audit.status === AuditStatus.Completed ? 'bg-green-100 border-green-500 text-green-800' :
                                     audit.status === AuditStatus.Overdue ? 'bg-red-100 border-red-500 text-red-800' :
                                     'bg-blue-100 border-blue-500 text-blue-800'
                                 }`}
                                 title={`${audit.id}: ${audit.title} (${audit.department})`}
                             >
-                                {audit.department}
+                                {audit.department} - {audit.id}
                             </div>
                         ))}
                     </div>
@@ -124,7 +152,24 @@ const AuditPlanningPage: React.FC = () => {
                     <div className="w-3 h-3 bg-red-100 border-red-500 border rounded"></div>
                     <span>Overdue</span>
                 </div>
+                <div className="ml-auto text-gray-400 italic">
+                    {canCreateAudit ? "Click any day to schedule a new audit." : "View-only access."}
+                </div>
             </div>
+
+            {isCreateModalOpen && (
+                <CreateAuditModal 
+                    isOpen={isCreateModalOpen} 
+                    onClose={() => setCreateModalOpen(false)} 
+                    initialDate={selectedDate}
+                />
+            )}
+
+            {selectedAuditId && (
+                <Modal size="4xl" title={`Audit Report: ${selectedAuditId}`} onClose={() => setSelectedAuditId(null)}>
+                    <AuditReportView auditId={selectedAuditId} />
+                </Modal>
+            )}
         </div>
     );
 };
