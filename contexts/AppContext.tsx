@@ -14,6 +14,7 @@ interface AppContextType {
   logout: () => void;
   setCurrentPage: (page: string) => void;
   addAudit: (auditData: Omit<Audit, 'id' | 'auditorId'>, findingsData: Omit<Finding, 'id' | 'auditId' | 'deadline' | 'status'>[]) => void;
+  updateAudit: (auditId: string, auditData: Partial<Audit>, findingsData: Finding[]) => void;
   submitCar: (carData: Omit<CAR, 'id' | 'submittedById' | 'submissionDate' | 'status' | 'auditId'>) => void;
   reviewCar: (carId: string, decision: 'Approved' | 'Rejected', remarks: string, rootCauseRemarks?: string, correctiveActionRemarks?: string) => void;
   requestExtension: (findingId: string, requestedDate: string, reason: string) => void;
@@ -47,6 +48,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setCurrentPage('login');
   };
   
+  const calculateDeadline = (level: FindingLevel, baseDate: string): string | undefined => {
+      const date = new Date(baseDate);
+      
+      switch(level) {
+          case FindingLevel.LEVEL1:
+              date.setDate(date.getDate() + 7);
+              return date.toISOString().split('T')[0];
+          case FindingLevel.LEVEL2:
+              date.setDate(date.getDate() + 30);
+              return date.toISOString().split('T')[0];
+          case FindingLevel.LEVEL3:
+              date.setDate(date.getDate() + 60);
+              return date.toISOString().split('T')[0];
+          default:
+              return undefined;
+      }
+  };
+
   const addAudit = (auditData: Omit<Audit, 'id' | 'auditorId'>, newFindingsData: Omit<Finding, 'id' | 'auditId' | 'deadline' | 'status'>[]) => {
       if(!currentUser || currentUser.role !== UserRole.Auditor) return;
 
@@ -67,42 +86,57 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           // If external and user provided custom ID, use it. Otherwise generate one.
           const autoId = `${month}${yearShort}-${String(findings.length + index + 1).padStart(3, '0')}`;
           
-          let deadline: string | undefined = undefined;
-          
-          // Logic for deadlines
-          const getDeadline = (days: number): string => {
-              const date = new Date(auditData.date);
-              date.setDate(date.getDate() + days);
-              return date.toISOString().split('T')[0];
-          };
-
-          switch(f.level) {
-              case FindingLevel.LEVEL1:
-                  deadline = getDeadline(7);
-                  break;
-              case FindingLevel.LEVEL2:
-                  deadline = getDeadline(30);
-                  break;
-              case FindingLevel.LEVEL3:
-                  deadline = getDeadline(60);
-                  break;
-              default:
-                  deadline = undefined;
-          }
-
           return {
               ...(f as Finding),
               id: autoId,
               customId: auditData.type === AuditType.External ? f.customId : undefined,
               auditId: newAuditRef,
               status: FindingStatus.Open,
-              deadline: deadline,
+              deadline: auditData.status !== AuditStatus.Draft ? calculateDeadline(f.level, auditData.date) : undefined,
               extensionStatus: ExtensionStatus.None,
           };
       });
 
       setAudits(prev => [...prev, newAudit]);
       setFindings(prev => [...prev, ...newFindings]);
+  };
+
+  const updateAudit = (auditId: string, auditData: Partial<Audit>, findingsData: Finding[]) => {
+      if(!currentUser || currentUser.role !== UserRole.Auditor) return;
+
+      // Update Audit
+      setAudits(prev => prev.map(a => a.id === auditId ? { ...a, ...auditData } : a));
+
+      // Update Findings:
+      // 1. Remove old findings for this audit that are not in the new list (if needed, but simpler to just upsert)
+      // 2. Update existing ones
+      // 3. Add new ones
+      
+      // Strategy: Remove all old findings for this audit and re-add the new list. 
+      // NOTE: This assumes we are in Draft/Editing mode where no CARs exist yet.
+      
+      setFindings(prev => {
+          const otherFindings = prev.filter(f => f.auditId !== auditId);
+          
+          const month = new Date(auditData.date || new Date().toISOString()).toLocaleString('en-US', { month: 'short' }).toUpperCase();
+          const yearShort = new Date(auditData.date || new Date().toISOString()).getFullYear().toString().slice(-2);
+
+          const updatedFindings = findingsData.map((f, index) => {
+             // Generate ID if it's a new temporary finding
+             const id = f.id || `${month}${yearShort}-${String(prev.length + index + 1).padStart(3, '0')}`;
+             
+             return {
+                 ...f,
+                 id: id,
+                 auditId: auditId,
+                 // Recalculate deadline if we are finalizing (not Draft)
+                 deadline: auditData.status !== AuditStatus.Draft ? calculateDeadline(f.level, auditData.date || new Date().toISOString()) : undefined,
+                 status: FindingStatus.Open // Ensure status is Open if finalizing
+             };
+          });
+          
+          return [...otherFindings, ...updatedFindings];
+      });
   };
 
   const submitCar = (carData: Omit<CAR, 'id' | 'submittedById' | 'submissionDate' | 'status' | 'auditId'>) => {
@@ -237,6 +271,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     logout,
     setCurrentPage,
     addAudit,
+    updateAudit,
     submitCar,
     reviewCar,
     requestExtension,

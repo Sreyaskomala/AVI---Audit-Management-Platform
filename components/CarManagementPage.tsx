@@ -101,16 +101,48 @@ const CarManagementPage: React.FC = () => {
                 {activeTab === 'submissions' && (
                     <div className="space-y-4">
                         {auditeeFindings.length === 0 && <p className="text-gray-500">No open findings.</p>}
-                        {auditeeFindings.map(finding => (
-                            <div key={finding.id} className="bg-white p-4 rounded-lg shadow-sm border flex justify-between items-center">
-                                <div>
-                                    <p className="font-bold text-lg">{finding.customId || finding.id}</p>
-                                    <p className="text-gray-600">{finding.description}</p>
-                                    <p className="text-xs text-red-500">Deadline: {new Date(finding.deadline!).toLocaleDateString()}</p>
+                        {auditeeFindings.map(finding => {
+                            // Find the last rejected CAR for this finding to show remarks
+                            const relevantCars = cars.filter(c => c.findingId === finding.id);
+                            const lastRejectedCar = relevantCars.filter(c => c.status === 'Rejected').sort((a,b) => b.submissionDate.localeCompare(a.submissionDate))[0];
+                            
+                            return (
+                                <div key={finding.id} className={`bg-white p-4 rounded-lg shadow-sm border flex flex-col md:flex-row justify-between md:items-center ${finding.status === FindingStatus.Rejected ? 'border-l-8 border-l-red-500' : ''}`}>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-bold text-lg">{finding.customId || finding.id}</p>
+                                            {finding.status === FindingStatus.Rejected && (
+                                                <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded-full">Rejected</span>
+                                            )}
+                                        </div>
+                                        <p className="text-gray-600">{finding.description}</p>
+                                        <p className="text-xs text-red-500 mt-1">Deadline: {new Date(finding.deadline!).toLocaleDateString()}</p>
+                                        
+                                        {finding.status === FindingStatus.Rejected && lastRejectedCar && (
+                                            <div className="mt-3 bg-red-50 border border-red-200 p-3 rounded-md text-sm text-red-900">
+                                                <p className="font-bold flex items-center gap-2">
+                                                    <span className="text-lg">⚠️</span> Action Required: Previous Submission Rejected
+                                                </p>
+                                                {lastRejectedCar.auditorRemarks && (
+                                                    <p className="mt-1 ml-6"><span className="font-semibold">Auditor Remarks:</span> "{lastRejectedCar.auditorRemarks}"</p>
+                                                )}
+                                                {lastRejectedCar.rootCauseRemarks && (
+                                                    <p className="mt-1 ml-6 text-xs"><span className="font-semibold">Root Cause Note:</span> {lastRejectedCar.rootCauseRemarks}</p>
+                                                )}
+                                                {lastRejectedCar.correctiveActionRemarks && (
+                                                    <p className="mt-1 ml-6 text-xs"><span className="font-semibold">Corrective Action Note:</span> {lastRejectedCar.correctiveActionRemarks}</p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="mt-4 md:mt-0 md:ml-4">
+                                        <button onClick={() => setSelectedFinding(finding)} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg w-full md:w-auto shadow-md">
+                                            {finding.status === FindingStatus.Rejected ? 'Resubmit CAR' : 'Submit CAR'}
+                                        </button>
+                                    </div>
                                 </div>
-                                <button onClick={() => setSelectedFinding(finding)} className="bg-primary text-white font-bold py-2 px-4 rounded-lg">Submit CAR</button>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
 

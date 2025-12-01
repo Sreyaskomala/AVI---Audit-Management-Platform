@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../contexts/AppContext';
-import { AuditStatus, Finding, FindingLevel, UserRole, AuditType, Location, Attachment } from '../types';
+import { AuditStatus, Finding, FindingLevel, UserRole, AuditType, Location, Attachment, Audit } from '../types';
 import Modal from './shared/Modal';
 import { FSTD_OPTIONS } from '../constants';
 
@@ -9,10 +9,12 @@ interface CreateAuditModalProps {
     isOpen: boolean;
     onClose: () => void;
     initialDate?: string;
+    existingAudit?: Audit;
+    existingFindings?: Finding[];
 }
 
-const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, initialDate }) => {
-    const { users, addAudit } = useAppContext();
+const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, initialDate, existingAudit, existingFindings }) => {
+    const { users, addAudit, updateAudit } = useAppContext();
     
     // Form State
     const [title, setTitle] = useState('');
@@ -20,7 +22,6 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
     const [date, setDate] = useState(initialDate || new Date().toISOString().split('T')[0]);
     const [additionalDates, setAdditionalDates] = useState<string[]>([]);
     const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
-    const [status, setStatus] = useState(AuditStatus.InProgress);
     const [findings, setFindings] = useState<Partial<Finding>[]>([]);
     const [auditType, setAuditType] = useState<AuditType>(AuditType.Internal);
     const [externalEntity, setExternalEntity] = useState('');
@@ -29,9 +30,28 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
 
     useEffect(() => {
         if (isOpen) {
-            setDate(initialDate || new Date().toISOString().split('T')[0]);
+            if (existingAudit) {
+                // Populate form for editing
+                setTitle(existingAudit.title);
+                setDepartment(existingAudit.department);
+                setDate(existingAudit.date);
+                setAdditionalDates(existingAudit.additionalDates || []);
+                setReportDate(existingAudit.reportDate || new Date().toISOString().split('T')[0]);
+                setAuditType(existingAudit.type);
+                setExternalEntity(existingAudit.externalEntity || '');
+                setLocation(existingAudit.location || Location.GURUGRAM_1);
+                setFstdId(existingAudit.fstdId || '');
+                setFindings(existingFindings || []);
+            } else {
+                // Reset/Init for new
+                setDate(initialDate || new Date().toISOString().split('T')[0]);
+                setTitle(''); setDepartment(''); 
+                setFindings([]); setAuditType(AuditType.Internal); 
+                setExternalEntity(''); setAdditionalDates([]);
+                setReportDate(new Date().toISOString().split('T')[0]); setFstdId('');
+            }
         }
-    }, [initialDate, isOpen]);
+    }, [initialDate, isOpen, existingAudit, existingFindings]);
 
     const handleAddFinding = () => {
         setFindings([...findings, { 
@@ -76,38 +96,47 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
         setAdditionalDates(newDates);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSave = (e: React.FormEvent, targetStatus: AuditStatus) => {
         e.preventDefault();
-        const auditee = users.find(u => u.department === department && u.role === UserRole.Auditee);
         
-        if (title && department && auditee && (auditType === AuditType.Internal || (auditType === AuditType.External && externalEntity))) {
-             addAudit({ 
-                 title, 
-                 department, 
-                 auditeeId: auditee.id, 
-                 date, 
-                 additionalDates: additionalDates.filter(d => d),
-                 reportDate,
-                 status,
-                 type: auditType,
-                 externalEntity: auditType === AuditType.External ? externalEntity : undefined,
-                 location,
-                 fstdId: department === 'Engineering' ? fstdId : undefined
-            }, findings as Omit<Finding, 'id' | 'auditId' | 'deadline' | 'status'>[]);
-            
-            // Reset form
-            setTitle(''); setDepartment(''); setDate(new Date().toISOString().split('T')[0]); setFindings([]);
-            setAuditType(AuditType.Internal); setExternalEntity(''); setAdditionalDates([]);
-            setReportDate(new Date().toISOString().split('T')[0]); setFstdId('');
-            onClose();
-        } else {
-            alert('Please fill all required fields and ensure an auditee exists for the selected department.');
+        // Basic Validation
+        if (!title || !department) {
+             alert('Please fill in Title and Department.');
+             return;
         }
+
+        const auditee = users.find(u => u.department === department && u.role === UserRole.Auditee);
+        if (!auditee) {
+            alert('No Auditee found for the selected department. Please create a user for this department first.');
+            return;
+        }
+
+        const auditPayload = {
+             title, 
+             department, 
+             auditeeId: auditee.id, 
+             date, 
+             additionalDates: additionalDates.filter(d => d),
+             reportDate,
+             status: targetStatus, // Draft or CARPending
+             type: auditType,
+             externalEntity: auditType === AuditType.External ? externalEntity : undefined,
+             location,
+             fstdId: department === 'Engineering' ? fstdId : undefined
+        };
+
+        if (existingAudit) {
+            updateAudit(existingAudit.id, auditPayload, findings as Finding[]);
+        } else {
+            addAudit(auditPayload, findings as Omit<Finding, 'id' | 'auditId' | 'deadline' | 'status'>[]);
+        }
+        
+        onClose();
     };
 
     return (
-        <Modal size="custom-xl" title="Create New Audit Report" onClose={onClose}>
-            <form onSubmit={handleSubmit} className="space-y-6">
+        <Modal size="custom-xl" title={existingAudit ? `Edit Audit: ${existingAudit.id}` : "Create New Audit Report"} onClose={onClose}>
+            <form className="space-y-6">
                 
                 {/* Audit Type Selection */}
                 <div className="bg-gray-50 p-4 rounded-md border border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -237,7 +266,6 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
                                         value={finding.customId} 
                                         onChange={e => handleFindingChange(index, 'customId', e.target.value)} 
                                         className="mt-1 w-full border border-purple-300 rounded-md p-2 bg-purple-50" 
-                                        required 
                                     />
                                 </div>
                             )}
@@ -277,9 +305,24 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
                     + Add Another Finding
                 </button>
                 
-                <div className="flex justify-end space-x-4 pt-4 border-t">
-                    <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-lg">Cancel</button>
-                    <button type="submit" className="bg-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg">Submit Audit Report</button>
+                <div className="flex justify-between items-center pt-4 border-t">
+                     <button type="button" onClick={onClose} className="text-gray-600 font-semibold hover:text-gray-900">Cancel</button>
+                     <div className="flex space-x-4">
+                        <button 
+                            type="button" 
+                            onClick={(e) => handleSave(e, AuditStatus.Draft)} 
+                            className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow"
+                        >
+                            Save Draft
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={(e) => handleSave(e, AuditStatus.CARPending)} 
+                            className="bg-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-primary-dark"
+                        >
+                            Finalize & Submit Report
+                        </button>
+                    </div>
                 </div>
             </form>
         </Modal>

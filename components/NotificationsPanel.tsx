@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { AlertTriangleIcon } from './icons/AlertTriangleIcon';
 import { ClockIcon } from './icons/ClockIcon';
 import { FileTextIcon } from './icons/FileTextIcon';
+import { XIcon } from './icons/XIcon';
 import { useAppContext } from '../contexts/AppContext';
-import { Notification, UserRole, ExtensionStatus } from '../types';
+import { Notification, UserRole, ExtensionStatus, FindingStatus } from '../types';
 
 const notificationIcons: Record<Notification['type'], React.ReactNode> = {
     CAR_DUE: <AlertTriangleIcon className="h-5 w-5 text-white" />,
@@ -12,6 +13,7 @@ const notificationIcons: Record<Notification['type'], React.ReactNode> = {
     CAR_SUBMITTED: <FileTextIcon className="h-5 w-5 text-white" />,
     FINDING_DUE: <AlertTriangleIcon className="h-5 w-5 text-white" />,
     EXTENSION_REQUEST: <ClockIcon className="h-5 w-5 text-white" />,
+    CAR_REJECTED: <XIcon className="h-5 w-5 text-white" />,
 };
 
 const notificationColors: Record<Notification['type'], string> = {
@@ -20,6 +22,7 @@ const notificationColors: Record<Notification['type'], string> = {
     CAR_SUBMITTED: 'bg-success',
     FINDING_DUE: 'bg-warning',
     EXTENSION_REQUEST: 'bg-purple-500',
+    CAR_REJECTED: 'bg-red-600',
 }
 
 const NotificationsPanel: React.FC = () => {
@@ -88,6 +91,7 @@ const NotificationsPanel: React.FC = () => {
 
         // 3. Findings deadlines (Auditee)
         if (currentUser.role === UserRole.Auditee) {
+            // Deadlines
             findings.forEach(finding => {
                 const audit = audits.find(a => a.id === finding.auditId);
                 if (!finding.deadline || !audit || audit.auditeeId !== currentUser.id) return;
@@ -111,6 +115,22 @@ const NotificationsPanel: React.FC = () => {
                             time: 'Just now'
                         });
                     }
+                }
+            });
+
+            // Rejected CARs
+            cars.forEach(car => {
+                if (car.status === 'Rejected' && car.submittedById === currentUser.id) {
+                     // Check if finding is still in Rejected state (meaning no new CAR submitted yet)
+                     const finding = findings.find(f => f.id === car.findingId);
+                     if (finding && finding.status === FindingStatus.Rejected) {
+                        generatedNotifications.push({
+                            id: generatedNotifications.length + 1,
+                            type: 'CAR_REJECTED',
+                            message: `CAR for finding ${finding.customId || finding.id} was rejected. Please review auditor remarks and resubmit.`,
+                            time: 'Action Required'
+                        });
+                     }
                 }
             });
         }

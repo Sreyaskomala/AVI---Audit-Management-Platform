@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Audit, AuditStatus, FindingStatus } from '../types';
 import { useAppContext } from '../contexts/AppContext';
@@ -7,6 +8,7 @@ interface RecentAuditsTableProps {
 }
 
 const statusColorClasses: Record<AuditStatus, string> = {
+  [AuditStatus.Draft]: 'bg-gray-100 text-gray-600 border border-gray-300 border-dashed',
   [AuditStatus.Scheduled]: 'bg-blue-100 text-blue-800',
   [AuditStatus.InProgress]: 'bg-indigo-100 text-indigo-800',
   [AuditStatus.CARPending]: 'bg-yellow-100 text-yellow-800',

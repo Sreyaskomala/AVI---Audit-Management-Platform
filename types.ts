@@ -13,6 +13,7 @@ export interface User {
 }
 
 export enum AuditStatus {
+  Draft = 'Draft',
   Scheduled = 'Scheduled',
   InProgress = 'In Progress',
   CARPending = 'CAR Pending',
@@ -118,7 +119,7 @@ export interface CAR {
 
 export interface Notification {
     id: number;
-    type: 'CAR_DUE' | 'AUDIT_UPCOMING' | 'CAR_SUBMITTED' | 'FINDING_DUE' | 'EXTENSION_REQUEST';
+    type: 'CAR_DUE' | 'AUDIT_UPCOMING' | 'CAR_SUBMITTED' | 'FINDING_DUE' | 'EXTENSION_REQUEST' | 'CAR_REJECTED';
     message: string;
     time: string;
 }

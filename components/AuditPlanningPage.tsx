@@ -8,11 +8,14 @@ import Modal from './shared/Modal';
 import AuditReportView from './AuditReportView';
 
 const AuditPlanningPage: React.FC = () => {
-    const { audits, currentUser } = useAppContext();
+    const { audits, currentUser, findings: allFindings } = useAppContext();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isCreateModalOpen, setCreateModalOpen] = useState(false);
     const [selectedDate, setSelectedDate] = useState<string>('');
-    const [selectedAuditId, setSelectedAuditId] = useState<string | null>(null);
+    
+    // For View/Edit
+    const [viewAuditId, setViewAuditId] = useState<string | null>(null);
+    const [editAuditId, setEditAuditId] = useState<string | null>(null);
 
     const canCreateAudit = currentUser?.role === UserRole.Auditor || currentUser?.department === 'Quality';
 
@@ -41,12 +44,18 @@ const AuditPlanningPage: React.FC = () => {
         if (!canCreateAudit) return;
         const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         setSelectedDate(dateStr);
+        setEditAuditId(null); // Ensure we are not editing
         setCreateModalOpen(true);
     };
 
-    const handleAuditClick = (e: React.MouseEvent, auditId: string) => {
+    const handleAuditClick = (e: React.MouseEvent, auditId: string, status: AuditStatus) => {
         e.stopPropagation();
-        setSelectedAuditId(auditId);
+        if (status === AuditStatus.Draft && canCreateAudit) {
+            setEditAuditId(auditId);
+            setCreateModalOpen(true);
+        } else {
+            setViewAuditId(auditId);
+        }
     };
 
     const renderCalendarDays = () => {
@@ -87,14 +96,16 @@ const AuditPlanningPage: React.FC = () => {
                         {daysAudits.map((audit, idx) => (
                             <div 
                                 key={`${audit.id}-${idx}`} 
-                                onClick={(e) => handleAuditClick(e, audit.id)}
+                                onClick={(e) => handleAuditClick(e, audit.id, audit.status)}
                                 className={`text-xs p-1 rounded truncate cursor-pointer hover:opacity-80 border-l-2 shadow-sm ${
+                                    audit.status === AuditStatus.Draft ? 'bg-gray-100 border-gray-500 text-gray-700 italic border-dashed' :
                                     audit.status === AuditStatus.Completed ? 'bg-green-100 border-green-500 text-green-800' :
                                     audit.status === AuditStatus.Overdue ? 'bg-red-100 border-red-500 text-red-800' :
                                     'bg-blue-100 border-blue-500 text-blue-800'
                                 }`}
-                                title={`${audit.id}: ${audit.title} (${audit.department})`}
+                                title={`${audit.id}: ${audit.title} (${audit.department}) ${audit.status === AuditStatus.Draft ? '[DRAFT]' : ''}`}
                             >
+                                {audit.status === AuditStatus.Draft ? '📝 [DRAFT] ' : ''}
                                 {audit.department} - {audit.id}
                             </div>
                         ))}
@@ -105,6 +116,10 @@ const AuditPlanningPage: React.FC = () => {
 
         return days;
     };
+    
+    // Find editing audit object
+    const editingAudit = audits.find(a => a.id === editAuditId);
+    const editingFindings = allFindings.filter(f => f.auditId === editAuditId);
 
     return (
         <div className="container mx-auto h-full flex flex-col">
@@ -141,6 +156,10 @@ const AuditPlanningPage: React.FC = () => {
             
             <div className="mt-4 flex gap-4 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
+                     <div className="w-3 h-3 bg-gray-200 border-gray-500 border border-dashed rounded"></div>
+                    <span>Draft</span>
+                </div>
+                <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-blue-100 border-blue-500 border rounded"></div>
                     <span>Scheduled/In Progress</span>
                 </div>
@@ -153,21 +172,23 @@ const AuditPlanningPage: React.FC = () => {
                     <span>Overdue</span>
                 </div>
                 <div className="ml-auto text-gray-400 italic">
-                    {canCreateAudit ? "Click any day to schedule a new audit." : "View-only access."}
+                    {canCreateAudit ? "Click a day to schedule. Click a Draft to edit." : "View-only access."}
                 </div>
             </div>
 
             {isCreateModalOpen && (
                 <CreateAuditModal 
                     isOpen={isCreateModalOpen} 
-                    onClose={() => setCreateModalOpen(false)} 
+                    onClose={() => { setCreateModalOpen(false); setEditAuditId(null); }} 
                     initialDate={selectedDate}
+                    existingAudit={editingAudit}
+                    existingFindings={editingFindings}
                 />
             )}
 
-            {selectedAuditId && (
-                <Modal size="4xl" title={`Audit Report: ${selectedAuditId}`} onClose={() => setSelectedAuditId(null)}>
-                    <AuditReportView auditId={selectedAuditId} />
+            {viewAuditId && (
+                <Modal size="4xl" title={`Audit Report: ${viewAuditId}`} onClose={() => setViewAuditId(null)}>
+                    <AuditReportView auditId={viewAuditId} />
                 </Modal>
             )}
         </div>

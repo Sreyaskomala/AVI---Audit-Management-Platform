@@ -1,16 +1,18 @@
 
 import React, { useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
-import { UserRole, AuditType } from '../types';
+import { UserRole, AuditType, AuditStatus } from '../types';
 import Modal from './shared/Modal';
 import AuditReportView from './AuditReportView';
 import { FileTextIcon } from './icons/FileTextIcon';
+import { EditIcon } from './icons/EditIcon';
 import CreateAuditModal from './CreateAuditModal';
 
 const AuditReportsPage: React.FC = () => {
     const { audits, users, findings: allFindings, currentUser } = useAppContext();
     const [isCreateModalOpen, setCreateModalOpen] = useState(false);
     const [selectedAuditId, setSelectedAuditId] = useState<string | null>(null);
+    const [editingAuditId, setEditingAuditId] = useState<string | null>(null);
 
     const canCreateAudit = currentUser?.role === UserRole.Auditor || currentUser?.department === 'Quality';
 
@@ -19,13 +21,22 @@ const AuditReportsPage: React.FC = () => {
         return relevantFindings.length
     };
 
+    const handleEditDraft = (auditId: string) => {
+        setEditingAuditId(auditId);
+        setCreateModalOpen(true);
+    }
+    
+    // Find editing audit object
+    const editingAudit = audits.find(a => a.id === editingAuditId);
+    const editingFindings = allFindings.filter(f => f.auditId === editingAuditId);
+
     return (
         <div className="container mx-auto">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-gray-800">Audit Reports</h1>
                 {canCreateAudit && (
                     <button 
-                        onClick={() => setCreateModalOpen(true)}
+                        onClick={() => { setEditingAuditId(null); setCreateModalOpen(true); }}
                         className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105"
                     >
                         Create New Audit
@@ -84,11 +95,23 @@ const AuditReportsPage: React.FC = () => {
                                         )}
                                     </td>
                                     <td className="px-6 py-4 text-center">{getFindingCounts(audit.id)}</td>
-                                    <td className="px-6 py-4">{audit.status}</td>
                                     <td className="px-6 py-4">
-                                        <button onClick={() => setSelectedAuditId(audit.id)} className="text-primary hover:underline flex items-center gap-1">
-                                           <FileTextIcon className="h-4 w-4" /> View
-                                        </button>
+                                        <span className={`px-2 py-1 rounded text-xs font-bold ${audit.status === AuditStatus.Draft ? 'bg-gray-200 text-gray-700 italic' : 'bg-green-100 text-green-800'}`}>
+                                            {audit.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex gap-3">
+                                            {audit.status === AuditStatus.Draft && canCreateAudit ? (
+                                                <button onClick={() => handleEditDraft(audit.id)} className="text-blue-600 hover:underline flex items-center gap-1">
+                                                   <EditIcon className="h-4 w-4" /> Edit
+                                                </button>
+                                            ) : (
+                                                <button onClick={() => setSelectedAuditId(audit.id)} className="text-primary hover:underline flex items-center gap-1">
+                                                   <FileTextIcon className="h-4 w-4" /> View
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                                 )
@@ -107,7 +130,9 @@ const AuditReportsPage: React.FC = () => {
             {isCreateModalOpen && (
                 <CreateAuditModal 
                     isOpen={isCreateModalOpen} 
-                    onClose={() => setCreateModalOpen(false)} 
+                    onClose={() => { setCreateModalOpen(false); setEditingAuditId(null); }}
+                    existingAudit={editingAudit}
+                    existingFindings={editingFindings}
                 />
             )}
         </div>
