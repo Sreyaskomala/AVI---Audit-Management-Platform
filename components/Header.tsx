@@ -7,6 +7,7 @@ import { ChevronDownIcon } from './icons/ChevronDownIcon';
 import { MenuIcon } from './icons/MenuIcon';
 import { SunIcon } from './icons/SunIcon';
 import { MoonIcon } from './icons/MoonIcon';
+import { UsersIcon } from './icons/UsersIcon';
 
 interface HeaderProps {
     setSidebarOpen: (open: boolean) => void;
@@ -63,8 +64,10 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
         </div>
         
         <div className="relative" ref={dropdownRef}>
-          <div className="flex items-center cursor-pointer" onClick={() => setDropdownOpen(!dropdownOpen)}>
-            <img className="h-10 w-10 rounded-full object-cover border-2 border-white dark:border-gray-600" src={currentUser?.avatarUrl} alt="User avatar" />
+          <div className="flex items-center cursor-pointer p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => setDropdownOpen(!dropdownOpen)}>
+             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20 text-primary">
+                <UsersIcon className="h-5 w-5" />
+             </div>
             <div className="ml-3 hidden sm:block">
               <p className="font-semibold text-gray-800 dark:text-gray-200">{currentUser?.name}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">{currentUser?.role} - {currentUser?.department}</p>

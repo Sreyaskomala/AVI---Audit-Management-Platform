@@ -80,7 +80,7 @@ const UserManagementPage: React.FC = () => {
                     <table className="w-full text-sm text-left text-gray-500">
                         <thead className="text-xs text-gray-700 uppercase bg-gray-100">
                             <tr>
-                                <th className="px-6 py-3">User</th>
+                                <th className="px-6 py-3">Name</th>
                                 <th className="px-6 py-3">Department</th>
                                 <th className="px-6 py-3">Role</th>
                                 <th className="px-6 py-3 text-center">Actions</th>
@@ -90,10 +90,7 @@ const UserManagementPage: React.FC = () => {
                             {users.map(user => (
                                 <tr key={user.id} className="bg-white border-b hover:bg-gray-50">
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center">
-                                            <img className="h-10 w-10 rounded-full object-cover" src={user.avatarUrl} alt={user.name} />
-                                            <div className="ml-4 font-medium text-gray-900">{user.name}</div>
-                                        </div>
+                                        <div className="font-medium text-gray-900">{user.name}</div>
                                     </td>
                                     <td className="px-6 py-4">{user.department}</td>
                                     <td className="px-6 py-4">{user.role}</td>
