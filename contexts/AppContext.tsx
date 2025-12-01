@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { mockAudits, mockFindings, mockUsers, mockCars } from '../constants';
-import { User, Audit, Finding, CAR, UserRole, FindingStatus, AuditStatus, FindingLevel } from '../types';
+import { User, Audit, Finding, CAR, UserRole, FindingStatus, AuditStatus, FindingLevel, AuditType, ExtensionStatus } from '../types';
 
 interface AppContextType {
   currentUser: User | null;
@@ -15,7 +15,9 @@ interface AppContextType {
   setCurrentPage: (page: string) => void;
   addAudit: (auditData: Omit<Audit, 'id' | 'auditorId'>, findingsData: Omit<Finding, 'id' | 'auditId' | 'deadline' | 'status'>[]) => void;
   submitCar: (carData: Omit<CAR, 'id' | 'submittedById' | 'submissionDate' | 'status' | 'auditId'>) => void;
-  reviewCar: (carId: string, decision: 'Approved' | 'Rejected', remarks: string) => void;
+  reviewCar: (carId: string, decision: 'Approved' | 'Rejected', remarks: string, rootCauseRemarks?: string, correctiveActionRemarks?: string) => void;
+  requestExtension: (findingId: string, requestedDate: string, reason: string) => void;
+  processExtension: (findingId: string, decision: 'Approved' | 'Rejected') => void;
   addUser: (userData: Omit<User, 'id' | 'avatarUrl'>) => void;
   updateUser: (userData: User) => void;
   deleteUser: (userId: number) => void;
@@ -49,7 +51,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if(!currentUser || currentUser.role !== UserRole.Auditor) return;
 
       const year = new Date(auditData.date).getFullYear();
-      const newAuditRef = `AR/${year}/${String(audits.length + 1).padStart(3, '0')}`;
+      const prefix = auditData.type === AuditType.External ? 'EXT' : 'AR';
+      const newAuditRef = `${prefix}/${year}/${String(audits.length + 1).padStart(3, '0')}`;
+      
       const newAudit: Audit = {
           ...auditData,
           id: newAuditRef,
@@ -60,10 +64,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const yearShort = new Date(auditData.date).getFullYear().toString().slice(-2);
       
       const newFindings: Finding[] = newFindingsData.map((f, index) => {
-          const newFindingId = `${month}${yearShort}-${String(findings.length + index + 1).padStart(3, '0')}`;
+          // If external and user provided custom ID, use it. Otherwise generate one.
+          const autoId = `${month}${yearShort}-${String(findings.length + index + 1).padStart(3, '0')}`;
           
           let deadline: string | undefined = undefined;
           
+          // Logic for deadlines
           const getDeadline = (days: number): string => {
               const date = new Date(auditData.date);
               date.setDate(date.getDate() + days);
@@ -86,10 +92,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
           return {
               ...(f as Finding),
-              id: newFindingId,
+              id: autoId,
+              customId: auditData.type === AuditType.External ? f.customId : undefined,
               auditId: newAuditRef,
               status: FindingStatus.Open,
               deadline: deadline,
+              extensionStatus: ExtensionStatus.None,
           };
       });
 
@@ -98,7 +106,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const submitCar = (carData: Omit<CAR, 'id' | 'submittedById' | 'submissionDate' | 'status' | 'auditId'>) => {
-      if(!currentUser || currentUser.role !== UserRole.Auditee) return;
+      if(!currentUser) return;
+      
       const findingToUpdate = findings.find(f => f.id === carData.findingId);
       if(!findingToUpdate) return;
       
@@ -116,7 +125,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setFindings(prev => prev.map(f => f.id === carData.findingId ? {...f, status: FindingStatus.CARSubmitted, carId: newCarId} : f));
   };
 
-  const reviewCar = (carId: string, decision: 'Approved' | 'Rejected', remarks: string) => {
+  const reviewCar = (carId: string, decision: 'Approved' | 'Rejected', remarks: string, rootCauseRemarks?: string, correctiveActionRemarks?: string) => {
       if(!currentUser || currentUser.role !== UserRole.Auditor) return;
       
       const carToUpdate = cars.find(c => c.id === carId);
@@ -125,10 +134,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const newCarStatus = decision;
       const newFindingStatus = decision === 'Approved' ? FindingStatus.Closed : FindingStatus.Rejected;
 
-      setCars(prev => prev.map(c => c.id === carId ? {...c, status: newCarStatus, auditorRemarks: remarks, reviewedById: currentUser.id, reviewDate: new Date().toISOString().split('T')[0]} : c));
+      setCars(prev => prev.map(c => c.id === carId ? {
+          ...c, 
+          status: newCarStatus, 
+          auditorRemarks: remarks, 
+          rootCauseRemarks: rootCauseRemarks,
+          correctiveActionRemarks: correctiveActionRemarks,
+          reviewedById: currentUser.id, 
+          reviewDate: new Date().toISOString().split('T')[0]
+      } : c));
+      
       setFindings(prev => prev.map(f => f.id === carToUpdate.findingId ? {...f, status: newFindingStatus} : f));
 
-      // If all findings for an audit are closed, update audit status
+      // Check if audit is complete
       const auditToUpdate = audits.find(a => a.id === carToUpdate.auditId);
       if (auditToUpdate) {
         const relatedFindings = findings.filter(f => f.auditId === auditToUpdate.id);
@@ -137,6 +155,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             setAudits(prev => prev.map(a => a.id === auditToUpdate.id ? {...a, status: AuditStatus.Completed} : a));
         }
       }
+  };
+
+  const requestExtension = (findingId: string, requestedDate: string, reason: string) => {
+      setFindings(prev => prev.map(f => f.id === findingId ? {
+          ...f,
+          extensionStatus: ExtensionStatus.Pending,
+          requestedDeadline: requestedDate,
+          extensionReason: reason
+      } : f));
+  };
+
+  const processExtension = (findingId: string, decision: 'Approved' | 'Rejected') => {
+      setFindings(prev => prev.map(f => {
+          if (f.id !== findingId) return f;
+          
+          if (decision === 'Approved') {
+              return {
+                  ...f,
+                  deadline: f.requestedDeadline,
+                  extensionStatus: ExtensionStatus.Approved
+              };
+          } else {
+              return {
+                  ...f,
+                  extensionStatus: ExtensionStatus.Rejected
+              };
+          }
+      }));
   };
 
   const addUser = (userData: Omit<User, 'id' | 'avatarUrl'>) => {
@@ -193,6 +239,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     addAudit,
     submitCar,
     reviewCar,
+    requestExtension,
+    processExtension,
     addUser,
     updateUser,
     deleteUser,

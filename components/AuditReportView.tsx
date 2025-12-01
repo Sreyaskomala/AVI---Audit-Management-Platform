@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
-import { Finding, FindingStatus, CAR } from '../types';
+import { Finding, CAR, AuditType, ExtensionStatus } from '../types';
 import { PrinterIcon } from './icons/PrinterIcon';
 import { SparklesIcon } from './icons/SparklesIcon';
 import { GoogleGenAI } from '@google/genai';
@@ -31,15 +31,17 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
 
         **Audit Details:**
         - Reference: ${audit.id}
+        - Type: ${audit.type} ${audit.type === AuditType.External ? `(Entity: ${audit.externalEntity})` : ''}
         - Title: ${audit.title}
         - Department: ${audit.department}
+        - Location: ${audit.location}
         - Date: ${new Date(audit.date).toLocaleDateString()}
         - Status: ${audit.status}
 
         **Findings (${relevantFindings.length} total):**\n`;
 
         relevantFindings.forEach(f => {
-            promptContent += `- Finding ID: ${f.id}, Level: ${f.level}, Status: ${f.status}, Description: ${f.description}\n`;
+            promptContent += `- Finding ID: ${f.customId || f.id}, Level: ${f.level}, Status: ${f.status}, Description: ${f.description}\n`;
         });
 
         promptContent += "\n**Summary Guidelines:**\n- Start with a clear opening statement about the audit's purpose and overall result.\n- Quantify the findings (e.g., 'The audit resulted in 2 Level 2 findings and 1 Observation.').\n- Briefly mention the areas where non-compliance was noted.\n- Conclude with the current status of the audit (e.g., 'Corrective actions are pending for open findings.').\n- Keep the entire summary to 3-4 sentences."
@@ -67,6 +69,9 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
         return <div>Audit not found.</div>;
     }
 
+    const isExternal = audit.type === AuditType.External;
+    const allDates = [audit.date, ...(audit.additionalDates || [])].map(d => new Date(d).toLocaleDateString()).join(', ');
+
     return (
         <div id="audit-report-content">
             <div className="flex justify-between items-center mb-6 no-print">
@@ -87,57 +92,148 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
                 </div>
             </div>
 
-            <div className="p-8 border rounded-lg bg-white space-y-8">
+            <div className="p-8 border rounded-lg bg-white space-y-8 print:border-0 print:p-0">
                 {/* Header */}
                 <div className="text-center border-b pb-4">
-                    <h1 className="text-3xl font-bold text-gray-800">Internal Audit Report</h1>
-                    <p className="text-gray-500">AVI Audit Management Platform</p>
+                    <h1 className="text-3xl font-bold text-gray-800 uppercase tracking-wide">
+                        {isExternal ? 'External Audit Report' : 'Internal Audit Report'}
+                    </h1>
+                    <p className="text-gray-500 font-medium">Aviation Quality Assurance</p>
+                    {isExternal && (
+                        <p className="text-purple-700 font-bold mt-2 text-lg">Authority: {audit.externalEntity}</p>
+                    )}
                 </div>
 
                 {/* Audit Details */}
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                    <div><strong>Reference No:</strong> {audit.id}</div>
-                    <div><strong>Department:</strong> {audit.department}</div>
-                    <div><strong>Audit Title:</strong> {audit.title}</div>
-                    <div><strong>Audit Date:</strong> {new Date(audit.date).toLocaleDateString()}</div>
-                    <div><strong>Auditor:</strong> {auditor?.name}</div>
-                    <div><strong>Auditee:</strong> {auditee?.name}</div>
+                <div className="bg-gray-50 p-4 rounded-lg border print:bg-transparent print:border-gray-200">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                        <div className="flex justify-between border-b border-gray-200 py-2">
+                            <strong className="text-gray-600">Audit Reference:</strong> 
+                            <span>{audit.id}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-2">
+                            <strong className="text-gray-600">Report Date:</strong> 
+                            <span>{audit.reportDate ? new Date(audit.reportDate).toLocaleDateString() : 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-2">
+                            <strong className="text-gray-600">Audit Date(s):</strong> 
+                            <span className="text-right">{allDates}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-2">
+                            <strong className="text-gray-600">Location:</strong> 
+                            <span>{audit.location || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-2">
+                            <strong className="text-gray-600">Department:</strong> 
+                            <span>{audit.department}</span>
+                        </div>
+                        {audit.fstdId && (
+                            <div className="flex justify-between border-b border-gray-200 py-2">
+                                <strong className="text-gray-600">FSTD ID:</strong> 
+                                <span>{audit.fstdId}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between border-b border-gray-200 py-2">
+                            <strong className="text-gray-600">{isExternal ? 'Uploaded By' : 'Auditor'}:</strong> 
+                            <span>{auditor?.name}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-2">
+                            <strong className="text-gray-600">Auditee:</strong> 
+                            <span>{auditee?.name}</span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* AI Summary */}
-                <div className="bg-gray-50 p-4 rounded-lg">
-                    <h2 className="text-lg font-semibold text-gray-700 mb-2">Executive Summary</h2>
-                    {isLoadingSummary && <p className="text-gray-500 animate-pulse">Generating summary, please wait...</p>}
+                <div className="bg-white rounded-lg">
+                    <h2 className="text-lg font-bold text-gray-800 mb-2 border-b pb-1">Executive Summary</h2>
                     {summary ? (
-                        <p className="text-gray-600 whitespace-pre-wrap">{summary}</p>
+                        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{summary}</p>
                     ) : (
-                        <p className="text-gray-500 italic">Click "Generate AI Summary" to create a summary for this report.</p>
+                        <p className="text-gray-400 italic">No summary generated.</p>
                     )}
                 </div>
 
                 {/* Findings Section */}
                 <div>
-                    <h2 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Findings Details</h2>
-                    <div className="space-y-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4 border-b-2 border-primary pb-1">Findings Details</h2>
+                    <div className="space-y-8">
                         {relevantFindings.map((finding: Finding, index) => {
                             const car = relevantCars.find(c => c.findingId === finding.id);
                             return (
-                                <div key={finding.id} className="p-4 border rounded-md break-inside-avoid">
-                                    <h3 className="font-bold text-md text-gray-800">Finding {index + 1}: {finding.id}</h3>
-                                    <div className="grid grid-cols-3 gap-4 mt-2 text-sm">
-                                        <span><strong>Level:</strong> {finding.level}</span>
-                                        <span><strong>Status:</strong> {finding.status}</span>
-                                        <span><strong>Deadline:</strong> {finding.deadline ? new Date(finding.deadline).toLocaleDateString() : 'N/A'}</span>
-                                        <span className="col-span-3"><strong>Reference:</strong> {finding.referenceDoc} - {finding.referencePara}</span>
-                                        <p className="col-span-3"><strong>Description:</strong> {finding.description}</p>
+                                <div key={finding.id} className="break-inside-avoid">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className={`px-2 py-1 text-xs font-bold text-white rounded ${finding.level.includes('1') ? 'bg-red-600' : finding.level.includes('2') ? 'bg-orange-500' : 'bg-blue-500'}`}>
+                                            {finding.level}
+                                        </span>
+                                        <h3 className="font-bold text-lg text-gray-800">
+                                            {finding.customId || finding.id}
+                                        </h3>
+                                        {finding.extensionStatus === ExtensionStatus.Approved && (
+                                            <span className="ml-2 px-2 py-0.5 text-xs font-bold border border-green-500 text-green-700 rounded-full bg-green-50">
+                                                Extension Granted
+                                            </span>
+                                        )}
                                     </div>
+
+                                    <div className="bg-gray-50 border border-l-4 border-l-gray-400 p-4 rounded-r-md text-sm text-gray-700">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                                            <div>
+                                                <strong>Reference:</strong> {finding.referenceDoc} - {finding.referencePara}
+                                            </div>
+                                            <div>
+                                                <strong>Deadline:</strong> 
+                                                <span className={finding.extensionStatus === ExtensionStatus.Approved ? 'line-through text-gray-400 mr-2' : ''}>
+                                                    {finding.deadline ? new Date(finding.deadline).toLocaleDateString() : 'N/A'}
+                                                </span>
+                                                {finding.extensionStatus === ExtensionStatus.Approved && (
+                                                    <span className="text-green-600 font-bold">
+                                                        {new Date(finding.requestedDeadline!).toLocaleDateString()}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <p className="mb-2"><strong>Description:</strong> {finding.description}</p>
+                                        
+                                        {finding.attachments && finding.attachments.length > 0 && (
+                                            <div className="mt-2 text-xs">
+                                                <strong>Attached Evidence (Finding):</strong>
+                                                <ul className="list-disc pl-5 mt-1 text-blue-600">
+                                                    {finding.attachments.map((att, i) => (
+                                                        <li key={i}>{att.name}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     {car && (
-                                        <div className="mt-4 pt-4 border-t border-dashed">
-                                            <h4 className="font-semibold text-gray-700">Corrective Action Report (CAR-{car.id})</h4>
-                                            <div className="mt-2 space-y-2 text-sm text-gray-600">
-                                                <p><strong>Root Cause:</strong> {car.rootCause}</p>
-                                                <p><strong>Corrective Action:</strong> {car.correctiveAction}</p>
-                                                <p><strong>Status:</strong> {car.status}</p>
+                                        <div className="mt-4 ml-6 pl-4 border-l-2 border-dashed border-gray-300">
+                                            <h4 className="font-bold text-gray-700 text-sm uppercase mb-2">Corrective Action Report</h4>
+                                            <div className="bg-green-50 p-4 rounded border text-sm text-gray-700 space-y-3">
+                                                <div>
+                                                    <strong className="text-green-800 block">Root Cause Analysis:</strong>
+                                                    <p>{car.rootCause}</p>
+                                                    {car.rootCauseRemarks && <p className="text-xs text-red-600 mt-1 italic"> Auditor: {car.rootCauseRemarks}</p>}
+                                                </div>
+                                                <div>
+                                                    <strong className="text-green-800 block">Corrective Action:</strong>
+                                                    <p>{car.correctiveAction}</p>
+                                                    {car.correctiveActionRemarks && <p className="text-xs text-red-600 mt-1 italic"> Auditor: {car.correctiveActionRemarks}</p>}
+                                                </div>
+                                                <div>
+                                                    <strong className="text-green-800 block">Evidence:</strong>
+                                                    <p>{car.evidence}</p>
+                                                    {car.attachments && car.attachments.length > 0 && (
+                                                        <div className="text-xs text-blue-600 mt-1 flex gap-2">
+                                                            {car.attachments.map(a => <span key={a.name}>📎 {a.name}</span>)}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="pt-2 border-t border-green-200 flex justify-between items-center">
+                                                     <span><strong>Status:</strong> <span className="font-bold">{car.status}</span></span>
+                                                     {car.auditorRemarks && <span className="italic text-gray-500">"{car.auditorRemarks}"</span>}
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -148,10 +244,9 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
                 </div>
 
                 {/* Footer */}
-                <div className="pt-8 text-center text-xs text-gray-400">
-                    <p>Report generated on {new Date().toLocaleString()}</p>
+                <div className="pt-8 text-center text-xs text-gray-400 border-t mt-8">
+                    <p>Report generated via AVI Audit Management Platform on {new Date().toLocaleString()}</p>
                 </div>
-
             </div>
         </div>
     );

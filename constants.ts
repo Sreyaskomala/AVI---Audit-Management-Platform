@@ -1,4 +1,7 @@
-import { Audit, AuditStatus, Notification, User, Finding, FindingLevel, FindingStatus, UserRole, CAR } from './types';
+
+import { Audit, AuditStatus, User, Finding, FindingLevel, FindingStatus, UserRole, CAR, AuditType, Location } from './types';
+
+export const FSTD_OPTIONS = ['FSTD 1', 'FSTD 2', 'FSTD 3 (Demo)'];
 
 export const mockUsers: User[] = [
   { id: 1, name: 'Sreyas', role: UserRole.Auditor, department: 'Quality', avatarUrl: 'https://i.pravatar.cc/150?u=sreyas' },
@@ -15,7 +18,12 @@ export const mockAudits: Audit[] = [
     auditorId: 1,
     auditeeId: 2,
     date: '2025-10-15',
+    additionalDates: ['2025-10-16'],
+    reportDate: '2025-10-18',
     status: AuditStatus.CARPending,
+    type: AuditType.Internal,
+    location: Location.GURUGRAM_1,
+    fstdId: 'FSTD 1',
   },
   {
     id: 'AR/2025/020',
@@ -24,7 +32,10 @@ export const mockAudits: Audit[] = [
     auditorId: 1,
     auditeeId: 4,
     date: '2025-10-12',
+    reportDate: '2025-10-12',
     status: AuditStatus.Completed,
+    type: AuditType.Internal,
+    location: Location.HYDERABAD,
   },
   {
     id: 'AR/2025/019',
@@ -33,7 +44,24 @@ export const mockAudits: Audit[] = [
     auditorId: 1,
     auditeeId: 3,
     date: '2025-09-28',
+    reportDate: '2025-09-30',
     status: AuditStatus.Overdue,
+    type: AuditType.Internal,
+    location: Location.GURUGRAM_2,
+  },
+  {
+    id: 'EXT/2025/001',
+    title: 'CAA Annual Surveillance',
+    department: 'Engineering',
+    auditorId: 1, 
+    auditeeId: 2, 
+    date: '2025-10-01',
+    additionalDates: ['2025-10-02', '2025-10-03'],
+    reportDate: '2025-10-05',
+    status: AuditStatus.CARPending,
+    type: AuditType.External,
+    externalEntity: 'Civil Aviation Authority',
+    location: Location.GURUGRAM_1,
   },
 ];
 
@@ -54,7 +82,7 @@ export const mockFindings: Finding[] = [
         referenceDoc: 'EASA Part-147',
         referencePara: '147.A.105(f)',
         level: FindingLevel.LEVEL1,
-        description: 'The examination environment did not meet the required standards for security and distraction-free conditions.',
+        description: 'The examination environment did not meet the required standards.',
         deadline: '2025-10-22',
         status: FindingStatus.CARSubmitted,
         carId: 'CAR-I-001'
@@ -78,6 +106,21 @@ export const mockFindings: Finding[] = [
         description: 'Safety meeting minutes could be more detailed to better track action items.',
         status: FindingStatus.Closed,
     },
+    {
+        id: 'EXT-001',
+        customId: 'EXT-CAA-2025-44', // Custom External ID
+        auditId: 'EXT/2025/001',
+        referenceDoc: 'CAA Regs',
+        referencePara: 'Part 145.A.50',
+        level: FindingLevel.LEVEL2,
+        description: 'Tool calibration records were missing for Torque Wrench S/N 12345.',
+        deadline: '2025-11-01',
+        status: FindingStatus.Open,
+        attachments: [
+            { name: 'calibration_log.pdf', type: 'document', url: '#' },
+            { name: 'wrench_photo.jpg', type: 'image', url: '#' }
+        ]
+    }
 ];
 
 export const mockCars: CAR[] = [
@@ -87,38 +130,11 @@ export const mockCars: CAR[] = [
         auditId: 'AR/2025/021',
         submittedById: 2,
         submissionDate: '2025-10-20',
-        rootCause: 'The designated examination room was temporarily unavailable due to maintenance, and the alternate location was not properly vetted for compliance.',
-        correctiveAction: 'A secondary, pre-approved examination room has been established and added to the official facility list. A new procedure requires formal verification of room suitability 24 hours prior to any exam.',
-        evidence: 'Updated facility manual (doc #FM-002), photos of new room, memo to all instructors.',
+        rootCause: 'The designated examination room was temporarily unavailable due to maintenance.',
+        correctiveAction: 'A secondary, pre-approved examination room has been established.',
+        evidence: 'Updated facility manual (doc #FM-002), photos of new room.',
+        attachments: [{ name: 'new_room_photo.jpg', type: 'image', url: '#' }],
         proposedClosureDate: '2025-10-25',
         status: 'Pending Review',
     }
-]
-
-
-export const mockNotifications: Notification[] = [
-    {
-        id: 1,
-        type: 'CAR_DUE',
-        message: 'CAR for AR/2025/019 is overdue by 3 days.',
-        time: '1h ago',
-    },
-    {
-        id: 2,
-        type: 'AUDIT_UPCOMING',
-        message: 'Audit AR/2025/022 for Maintenance is scheduled for tomorrow.',
-        time: '5h ago',
-    },
-    {
-        id: 3,
-        type: 'CAR_SUBMITTED',
-        message: 'New CAR submitted for AR/2025/021 by Engineering Dept.',
-        time: '1 day ago',
-    },
-    {
-        id: 4,
-        type: 'FINDING_DUE',
-        message: 'Finding OCT25-003 is approaching its deadline (3 days).',
-        time: '2 days ago',
-    },
 ];

@@ -1,3 +1,4 @@
+
 export enum UserRole {
   Auditor = 'Auditor',
   Auditee = 'Auditee',
@@ -19,6 +20,18 @@ export enum AuditStatus {
   Overdue = 'Overdue',
 }
 
+export enum AuditType {
+  Internal = 'Internal',
+  External = 'External',
+}
+
+export enum Location {
+    GURUGRAM_1 = 'Gurugram 1',
+    GURUGRAM_2 = 'Gurugram 2',
+    HYDERABAD = 'Hyderabad',
+    MUMBAI_PLANNING = 'Mumbai (Planning)',
+}
+
 export enum FindingLevel {
     LEVEL1 = 'LEVEL 1',
     LEVEL2 = 'LEVEL 2',
@@ -36,17 +49,36 @@ export enum FindingStatus {
     Rejected = 'Rejected',
 }
 
+export enum ExtensionStatus {
+    None = 'None',
+    Pending = 'Pending',
+    Approved = 'Approved',
+    Rejected = 'Rejected',
+}
+
+export interface Attachment {
+    name: string;
+    url: string; // Base64 or mock URL
+    type: 'image' | 'document' | 'video' | 'other';
+}
+
 export interface Finding {
-  id: string; // e.g., OCT25-001
+  id: string; // Internal generated ID
+  customId?: string; // For external audits
   auditId: string;
   referenceDoc: string;
   referencePara: string;
   level: FindingLevel;
   description: string;
-  evidence?: string;
+  attachments?: Attachment[];
   deadline?: string;
   status: FindingStatus;
   carId?: string;
+  
+  // Extension Logic
+  extensionStatus?: ExtensionStatus;
+  extensionReason?: string;
+  requestedDeadline?: string;
 }
 
 export interface Audit {
@@ -55,8 +87,14 @@ export interface Audit {
   department: string;
   auditorId: number;
   auditeeId: number;
-  date: string;
+  date: string; // Main scheduled date
+  additionalDates?: string[]; // For multi-day audits
+  reportDate?: string; // Date report was generated
   status: AuditStatus;
+  type: AuditType;
+  externalEntity?: string;
+  location?: Location;
+  fstdId?: string; // Optional FSTD reference (e.g., FSTD-1)
 }
 
 export interface CAR {
@@ -68,16 +106,19 @@ export interface CAR {
   rootCause: string;
   correctiveAction: string;
   evidence: string;
+  attachments?: Attachment[]; // Evidence files
   proposedClosureDate: string;
   status: 'Pending Review' | 'Approved' | 'Rejected';
   auditorRemarks?: string;
+  rootCauseRemarks?: string;
+  correctiveActionRemarks?: string;
   reviewDate?: string;
   reviewedById?: number;
 }
 
 export interface Notification {
     id: number;
-    type: 'CAR_DUE' | 'AUDIT_UPCOMING' | 'CAR_SUBMITTED' | 'FINDING_DUE';
+    type: 'CAR_DUE' | 'AUDIT_UPCOMING' | 'CAR_SUBMITTED' | 'FINDING_DUE' | 'EXTENSION_REQUEST';
     message: string;
     time: string;
 }

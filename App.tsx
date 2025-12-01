@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -9,6 +10,7 @@ import CarManagementPage from './components/CarManagementPage';
 import FindingsTrackerPage from './components/FindingsTrackerPage';
 import UserManagementPage from './components/UserManagementPage';
 import ProfilePage from './components/ProfilePage';
+import AuditPlanningPage from './components/AuditPlanningPage';
 
 const App: React.FC = () => {
   const { currentUser, currentPage } = useAppContext();
@@ -28,6 +30,8 @@ const App: React.FC = () => {
         return <CarManagementPage />;
       case 'findings-tracker':
         return <FindingsTrackerPage />;
+      case 'audit-planning':
+        return <AuditPlanningPage />;
       case 'user-management':
         return <UserManagementPage />;
       case 'profile':
