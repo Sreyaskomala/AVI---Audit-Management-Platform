@@ -10,6 +10,7 @@ import { SettingsIcon } from './icons/SettingsIcon';
 import { XIcon } from './icons/XIcon';
 import { useAppContext } from '../contexts/AppContext';
 import { UserRole } from '../types';
+import { Logo } from './Logo';
 
 interface SidebarProps {
     sidebarOpen: boolean;
@@ -51,11 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
             <aside className={`fixed inset-y-0 left-0 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out w-64 bg-white dark:bg-gray-800 border-r-2 border-gray-200 dark:border-gray-700 shadow-xl z-30 flex flex-col`}>
                 <div className="flex items-center justify-between p-4 border-b-2 border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-center w-full">
-                         <img 
-                            src="https://aistudiocdn.com/uploads/1b24479e-c85d-4f6c-8208-a51cf16b3d17.png" 
-                            alt="AVI Logo" 
-                            className="h-12 w-auto object-contain"
-                        />
+                         <Logo className="h-12 w-auto text-gray-800 dark:text-white" />
                     </div>
                     <button onClick={() => setSidebarOpen(false)} className="text-gray-500 dark:text-gray-400 focus:outline-none lg:hidden absolute right-4">
                         <XIcon className="h-6 w-6" />

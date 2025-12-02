@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { User } from '../types';
+import { Logo } from './Logo';
 
 const LoginPage: React.FC = () => {
   const { users, login } = useAppContext();
@@ -18,11 +19,7 @@ const LoginPage: React.FC = () => {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-2xl shadow-xl">
         <div className="flex flex-col items-center">
-            <img 
-                src="https://aistudiocdn.com/uploads/1b24479e-c85d-4f6c-8208-a51cf16b3d17.png" 
-                alt="AVI Logo" 
-                className="h-24 w-auto object-contain mb-4"
-            />
+            <Logo className="h-20 w-auto mb-4 text-gray-800" />
             <h1 className="text-4xl font-bold text-gray-800 mt-2">AVI Login</h1>
             <p className="text-gray-500 mt-2">Audit Management Platform</p>
         </div>
