@@ -3,21 +3,23 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { UserRole, Finding, CAR, FindingStatus, Attachment, ExtensionStatus } from '../types';
 import Modal from './shared/Modal';
+import { DownloadIcon } from './icons/DownloadIcon';
+import { FileTextIcon } from './icons/FileTextIcon';
+import { CheckCircleIcon } from './icons/CheckCircleIcon';
 
 const CarManagementPage: React.FC = () => {
     const { currentUser, findings, cars, users, submitCar, reviewCar, requestExtension, processExtension } = useAppContext();
-    const [activeTab, setActiveTab] = useState<'submissions' | 'extensions'>('submissions');
+    
+    // Tabs state
+    const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
 
-    // State for CAR
+    // State for CAR Submission (Auditee)
     const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
-    const [selectedCar, setSelectedCar] = useState<CAR | null>(null);
     const [rootCause, setRootCause] = useState('');
     const [correctiveAction, setCorrectiveAction] = useState('');
     const [evidence, setEvidence] = useState('');
     const [proposedClosureDate, setProposedClosureDate] = useState('');
     const [attachments, setAttachments] = useState<Attachment[]>([]);
-    
-    // New: Auditee Intent
     const [auditeeStatus, setAuditeeStatus] = useState<'Open' | 'Closed'>('Open');
 
     // Extension within CAR submission
@@ -25,17 +27,13 @@ const CarManagementPage: React.FC = () => {
     const [extensionDateWithCar, setExtensionDateWithCar] = useState('');
     const [extensionReasonWithCar, setExtensionReasonWithCar] = useState('');
     
-    // State for Extension (Stand alone - rarely used now but kept for legacy)
-    const [extensionFinding, setExtensionFinding] = useState<Finding | null>(null);
-    const [extensionDate, setExtensionDate] = useState('');
-    const [extensionReason, setExtensionReason] = useState('');
-
-    // State for CAR review
+    // State for CAR review (Auditor)
+    const [selectedCar, setSelectedCar] = useState<CAR | null>(null);
     const [remarks, setRemarks] = useState('');
     const [rootCauseRemarks, setRootCauseRemarks] = useState('');
     const [correctiveActionRemarks, setCorrectiveActionRemarks] = useState('');
     const [closeFinding, setCloseFinding] = useState(false);
-    const [approveExtension, setApproveExtension] = useState<boolean | null>(null); // null = no action, true = approve, false = reject
+    const [approveExtension, setApproveExtension] = useState<boolean | null>(null); 
 
     // Reset fields when finding is selected
     useEffect(() => {
@@ -51,6 +49,7 @@ const CarManagementPage: React.FC = () => {
             setProposedClosureDate('');
             setAttachments([]);
             setAuditeeStatus('Open');
+            setRequestExtensionWithCar(false);
         }
     }, [selectedFinding]);
 
@@ -66,11 +65,43 @@ const CarManagementPage: React.FC = () => {
             const file = e.target.files[0];
             const newAttachment: Attachment = {
                 name: file.name,
-                url: '#',
+                url: '#', // In a real app, this would be a blob URL or S3 link
                 type: file.type.includes('image') ? 'image' : 'document'
             };
             setAttachments([...attachments, newAttachment]);
         }
+    };
+
+    // Helper to render attachments with download capability
+    const renderAttachments = (atts: Attachment[] | undefined) => {
+        if (!atts || atts.length === 0) return <span className="text-gray-400 text-xs italic">No attachments</span>;
+        
+        return (
+            <div className="flex flex-wrap gap-2 mt-2">
+                {atts.map((att, i) => (
+                    <a 
+                        key={i} 
+                        href={att.url} 
+                        download={att.name}
+                        onClick={(e) => {
+                            if(att.url === '#') {
+                                e.preventDefault();
+                                alert(`Simulating download for: ${att.name}`);
+                            }
+                        }}
+                        className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-2 rounded-lg shadow-sm hover:bg-gray-50 hover:border-blue-300 transition-colors text-sm text-blue-700 group"
+                    >
+                        {att.type === 'image' ? (
+                            <span className="text-lg">🖼️</span>
+                        ) : (
+                            <FileTextIcon className="h-4 w-4" />
+                        )}
+                        <span className="font-medium truncate max-w-[150px]">{att.name}</span>
+                        <DownloadIcon className="h-4 w-4 text-gray-400 group-hover:text-blue-500" />
+                    </a>
+                ))}
+            </div>
+        );
     };
 
     const handleSubmitCar = (e: React.FormEvent) => {
@@ -87,20 +118,8 @@ const CarManagementPage: React.FC = () => {
             }, requestExtensionWithCar ? { date: extensionDateWithCar, reason: extensionReasonWithCar } : undefined);
             
             setSelectedFinding(null);
-            // Reset fields
-            setRootCause(''); setCorrectiveAction(''); setEvidence(''); setProposedClosureDate(''); setAttachments([]);
-            setRequestExtensionWithCar(false); setExtensionDateWithCar(''); setExtensionReasonWithCar('');
         }
     };
-    
-    const handleSubmitExtension = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (extensionFinding && extensionDate && extensionReason) {
-            requestExtension(extensionFinding.id, extensionDate, extensionReason);
-            setExtensionFinding(null);
-            setExtensionDate(''); setExtensionReason('');
-        }
-    }
     
     const handleReviewCar = (e: React.FormEvent) => {
         e.preventDefault();
@@ -118,92 +137,201 @@ const CarManagementPage: React.FC = () => {
         }
     };
 
-    const auditeeFindings = findings.filter(f => {
+    // --- Data Filtering ---
+
+    // Auditee: Findings that need action (Open, Rejected, CARSubmitted but not closed)
+    const auditeeOpenFindings = findings.filter(f => {
         const audit = useAppContext().audits.find(a => a.id === f.auditId);
-        return audit?.auditeeId === currentUser?.id && (f.status !== FindingStatus.Closed);
+        return audit?.auditeeId === currentUser?.id && f.status !== FindingStatus.Closed;
     });
 
+    // Auditee: History (Closed findings OR findings where CARs have been submitted)
+    const auditeeHistoryFindings = findings.filter(f => {
+         const audit = useAppContext().audits.find(a => a.id === f.auditId);
+         // It's in history if it's closed OR if there are CARs associated with it (even if open)
+         const hasCars = cars.some(c => c.findingId === f.id);
+         return audit?.auditeeId === currentUser?.id && (f.status === FindingStatus.Closed || hasCars);
+    });
+
+    // Auditor: Pending Reviews
     const carsToReview = cars.filter(c => {
         const audit = useAppContext().audits.find(a => a.id === c.auditId);
         return audit?.auditorId === currentUser?.id && c.status === 'Pending Review';
+    });
+
+    // Auditor: Review History
+    const reviewedCars = cars.filter(c => {
+        const audit = useAppContext().audits.find(a => a.id === c.auditId);
+        return audit?.auditorId === currentUser?.id && c.status === 'Reviewed';
     });
 
     // --- Auditee View ---
     if (currentUser?.role === UserRole.Auditee) {
         return (
             <div className="container mx-auto">
-                <div className="flex space-x-4 mb-6">
-                    <button onClick={() => setActiveTab('submissions')} className={`px-4 py-2 font-bold rounded-lg ${activeTab === 'submissions' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'}`}>My Findings & Actions</button>
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-3xl font-bold text-gray-800 dark:text-white">CAR Management</h1>
                 </div>
 
-                {activeTab === 'submissions' && (
+                {/* Tabs */}
+                <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+                    <button 
+                        onClick={() => setActiveTab('pending')}
+                        className={`py-2 px-4 font-medium text-sm focus:outline-none border-b-2 transition-colors ${activeTab === 'pending' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                    >
+                        Open Findings / Action Required
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('history')}
+                        className={`py-2 px-4 font-medium text-sm focus:outline-none border-b-2 transition-colors ${activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                    >
+                        Submission History
+                    </button>
+                </div>
+
+                {activeTab === 'pending' && (
                     <div className="space-y-4">
-                        {auditeeFindings.length === 0 && <p className="text-gray-500">No open findings requiring action.</p>}
-                        {auditeeFindings.map(finding => {
+                        {auditeeOpenFindings.length === 0 && (
+                            <div className="text-center py-10 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                                <CheckCircleIcon className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                                <h3 className="text-lg font-medium text-gray-900">All Caught Up!</h3>
+                                <p className="text-gray-500">You have no open findings requiring immediate action.</p>
+                            </div>
+                        )}
+                        {auditeeOpenFindings.map(finding => {
                             const findingCars = cars.filter(c => c.findingId === finding.id).sort((a,b) => a.carNumber - b.carNumber);
                             const nextCarNumber = findingCars.length + 1;
                             
                             return (
-                                <div key={finding.id} className="bg-white p-4 rounded-lg shadow-sm border flex flex-col">
-                                    <div className="flex flex-col md:flex-row justify-between md:items-start">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2">
-                                                <p className="font-bold text-lg text-gray-800">{finding.customId || finding.id}</p>
-                                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                                                    finding.status === FindingStatus.Open ? 'bg-blue-100 text-blue-800' :
-                                                    finding.status === FindingStatus.CARSubmitted ? 'bg-yellow-100 text-yellow-800' :
-                                                    'bg-gray-100 text-gray-800'
-                                                }`}>
-                                                    {finding.status}
-                                                </span>
-                                                {finding.extensionStatus !== ExtensionStatus.None && (
-                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
-                                                        finding.extensionStatus === ExtensionStatus.Pending ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                                                        finding.extensionStatus === ExtensionStatus.Approved ? 'bg-green-100 text-green-800 border-green-200' :
-                                                        'bg-red-100 text-red-800 border-red-200'
-                                                    }`}>
-                                                        Extension: {finding.extensionStatus}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="text-gray-600 mt-1">{finding.description}</p>
-                                            <p className="text-xs text-red-500 mt-1 font-semibold">
-                                                Deadline: {new Date(finding.deadline!).toLocaleDateString()}
+                                <div key={finding.id} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col md:flex-row gap-6">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className={`px-2 py-1 text-xs font-bold rounded ${finding.level.includes('1') ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'}`}>
+                                                {finding.level}
+                                            </span>
+                                            <h3 className="font-bold text-lg text-gray-800 dark:text-white">{finding.customId || finding.id}</h3>
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                                finding.status === FindingStatus.Open ? 'bg-blue-100 text-blue-800' :
+                                                finding.status === FindingStatus.CARSubmitted ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-gray-100 text-gray-800'
+                                            }`}>
+                                                {finding.status}
+                                            </span>
+                                        </div>
+                                        
+                                        <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-md mb-4 text-sm text-gray-700 dark:text-gray-300">
+                                            <span className="font-semibold block mb-1 text-xs uppercase text-gray-500">Description:</span>
+                                            {finding.description}
+                                        </div>
+
+                                        <div className="flex items-center gap-4 text-sm mb-4">
+                                            <div className="text-red-500 font-semibold flex items-center gap-1">
+                                                <span className="uppercase text-xs text-gray-500 mr-1">Deadline:</span> 
+                                                {new Date(finding.deadline!).toLocaleDateString()}
                                                 {finding.extensionStatus === ExtensionStatus.Approved && " (Extended)"}
-                                            </p>
-                                            
-                                            {/* History of CARs */}
-                                            {findingCars.length > 0 && (
-                                                <div className="mt-4 space-y-2">
-                                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Action History</p>
-                                                    {findingCars.map(car => (
-                                                        <div key={car.id} className="text-sm bg-gray-50 border p-3 rounded-md">
-                                                            <div className="flex justify-between">
-                                                                <span className="font-bold text-gray-700">CAR {car.carNumber} ({new Date(car.submissionDate).toLocaleDateString()})</span>
-                                                                <span className={`text-xs px-2 py-0.5 rounded ${car.status === 'Pending Review' ? 'bg-yellow-200' : 'bg-green-200'}`}>{car.status}</span>
-                                                            </div>
-                                                            <p className="text-gray-600 mt-1"><span className="font-semibold">Action:</span> {car.correctiveAction}</p>
-                                                            {car.auditorRemarks && (
-                                                                <div className="mt-2 text-xs bg-white p-2 border rounded">
-                                                                    <span className="font-bold text-blue-700">Auditor:</span> {car.auditorRemarks}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                            </div>
+                                            {finding.extensionStatus === ExtensionStatus.Pending && (
+                                                <span className="text-purple-600 font-bold text-xs bg-purple-50 px-2 py-1 rounded">Extension Pending</span>
                                             )}
                                         </div>
-                                        <div className="mt-4 md:mt-0 md:ml-4">
-                                            <button 
-                                                onClick={() => setSelectedFinding(finding)} 
-                                                className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg w-full md:w-auto shadow-md whitespace-nowrap"
-                                            >
-                                                {findingCars.length > 0 ? `+ Add Update (CAR ${nextCarNumber})` : 'Submit Initial CAR'}
-                                            </button>
-                                        </div>
+
+                                        {/* Status of last submission */}
+                                        {findingCars.length > 0 && (
+                                            <div className="mt-4">
+                                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Latest Status</p>
+                                                {(() => {
+                                                    const lastCar = findingCars[findingCars.length - 1];
+                                                    return (
+                                                        <div className="bg-white border p-3 rounded-md shadow-sm">
+                                                            <div className="flex justify-between items-center mb-1">
+                                                                <span className="font-bold text-gray-700">CAR {lastCar.carNumber}</span>
+                                                                <span className={`text-xs px-2 py-0.5 rounded ${lastCar.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>{lastCar.status}</span>
+                                                            </div>
+                                                            {lastCar.auditorRemarks && (
+                                                                <p className="text-xs text-red-600 mt-1">Auditor: "{lastCar.auditorRemarks}"</p>
+                                                            )}
+                                                        </div>
+                                                    )
+                                                })()}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="md:w-64 flex flex-col justify-center border-t md:border-t-0 md:border-l border-gray-100 md:pl-6 pt-4 md:pt-0">
+                                        <button 
+                                            onClick={() => setSelectedFinding(finding)} 
+                                            className="bg-primary hover:bg-primary-dark text-white font-bold py-3 px-4 rounded-lg shadow-md transition-all w-full flex items-center justify-center gap-2"
+                                        >
+                                            <FileTextIcon className="h-5 w-5" />
+                                            {findingCars.length > 0 ? `Submit CAR ${nextCarNumber}` : 'Submit Initial CAR'}
+                                        </button>
+                                        <p className="text-xs text-center text-gray-500 mt-2">
+                                            {findingCars.length > 0 ? 'Update progress or address rejection' : 'Start corrective action process'}
+                                        </p>
                                     </div>
                                 </div>
                             );
+                        })}
+                    </div>
+                )}
+
+                {activeTab === 'history' && (
+                    <div className="space-y-6">
+                        {auditeeHistoryFindings.map(finding => {
+                            const findingCars = cars.filter(c => c.findingId === finding.id).sort((a,b) => a.carNumber - b.carNumber);
+                            
+                            return (
+                                <div key={finding.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                                    <div className="bg-gray-50 dark:bg-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                                        <div>
+                                            <h3 className="font-bold text-gray-800 dark:text-white">{finding.customId || finding.id}</h3>
+                                            <p className="text-xs text-gray-500 truncate max-w-md">{finding.description}</p>
+                                        </div>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                            finding.status === FindingStatus.Closed ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                                        }`}>
+                                            {finding.status}
+                                        </span>
+                                    </div>
+                                    <div className="p-6">
+                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">Submission Timeline</h4>
+                                        <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
+                                            {findingCars.map(car => (
+                                                <div key={car.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                                                    {/* Icon */}
+                                                    <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-slate-300 group-[.is-active]:bg-emerald-500 text-slate-500 group-[.is-active]:text-emerald-50 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
+                                                        <span className="font-bold text-xs">{car.carNumber}</span>
+                                                    </div>
+                                                    
+                                                    {/* Card */}
+                                                    <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded border border-slate-200 shadow">
+                                                        <div className="flex items-center justify-between space-x-2 mb-1">
+                                                            <div className="font-bold text-slate-900">CAR {car.carNumber}</div>
+                                                            <time className="font-caveat font-medium text-indigo-500 text-xs">{new Date(car.submissionDate).toLocaleDateString()}</time>
+                                                        </div>
+                                                        <div className="text-slate-500 text-sm mb-2">{car.correctiveAction}</div>
+                                                        {car.attachments && car.attachments.length > 0 && (
+                                                            <div className="mb-2">
+                                                                {renderAttachments(car.attachments)}
+                                                            </div>
+                                                        )}
+                                                        <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${
+                                                            car.status === 'Reviewed' ? 'bg-blue-50 text-blue-600' : 'bg-yellow-50 text-yellow-600'
+                                                        }`}>
+                                                            {car.status} {car.reviewDate ? `on ${new Date(car.reviewDate).toLocaleDateString()}` : ''}
+                                                        </div>
+                                                        {car.auditorRemarks && (
+                                                            <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-600 italic">
+                                                                "Auditor: {car.auditorRemarks}"
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )
                         })}
                     </div>
                 )}
@@ -213,7 +341,8 @@ const CarManagementPage: React.FC = () => {
                     <Modal title={`Submit CAR Update for: ${selectedFinding.id}`} onClose={() => setSelectedFinding(null)}>
                         <form onSubmit={handleSubmitCar} className="space-y-4">
                             <div className="bg-blue-50 p-3 rounded-md mb-4 text-sm text-blue-800">
-                                Please provide the Corrective Action Report details below. You can also request a deadline extension if the issue requires more time to resolve.
+                                Submitting <strong>CAR {cars.filter(c => c.findingId === selectedFinding.id).length + 1}</strong>. 
+                                Please ensure all evidence is attached.
                             </div>
 
                             <div>
@@ -232,10 +361,18 @@ const CarManagementPage: React.FC = () => {
                             <div><label className="block text-sm font-medium">Evidence Description</label><textarea value={evidence} onChange={e => setEvidence(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required /></div>
                             
                             {/* Evidence Upload */}
-                            <div>
-                                <label className="block text-sm font-medium">Evidence Upload (Photo/Doc)</label>
-                                <input type="file" onChange={handleFileUpload} className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-                                {attachments.length > 0 && <p className="text-xs text-gray-500 mt-1">{attachments.length} file(s) attached.</p>}
+                            <div className="bg-gray-50 p-3 rounded border border-dashed border-gray-300">
+                                <label className="block text-sm font-medium mb-1">Upload Evidence (Photo/Doc)</label>
+                                <input type="file" onChange={handleFileUpload} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                                {attachments.length > 0 && (
+                                    <div className="mt-2 space-y-1">
+                                        {attachments.map((att, i) => (
+                                            <div key={i} className="text-xs flex items-center text-green-600 font-medium">
+                                                <CheckCircleIcon className="h-3 w-3 mr-1" /> Attached: {att.name}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             <div><label className="block text-sm font-medium">Proposed Closure Date</label><input type="date" value={proposedClosureDate} onChange={e => setProposedClosureDate(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required /></div>
@@ -293,39 +430,93 @@ const CarManagementPage: React.FC = () => {
     return (
          <div className="container mx-auto">
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">CAR Reviews</h1>
+
+             {/* Tabs */}
+             <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+                 <button 
+                     onClick={() => setActiveTab('pending')}
+                     className={`py-2 px-4 font-medium text-sm focus:outline-none border-b-2 transition-colors ${activeTab === 'pending' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                 >
+                     Pending Reviews ({carsToReview.length})
+                 </button>
+                 <button 
+                     onClick={() => setActiveTab('history')}
+                     className={`py-2 px-4 font-medium text-sm focus:outline-none border-b-2 transition-colors ${activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                 >
+                     Review History
+                 </button>
+             </div>
             
-            <div className="space-y-4">
-                {carsToReview.length === 0 && <div className="p-8 text-center bg-gray-50 rounded-lg text-gray-500">No pending CARs to review.</div>}
-                
-                {carsToReview.map(car => {
-                    const finding = findings.find(f => f.id === car.findingId);
-                    return (
-                    <div key={car.id} className="bg-white p-6 rounded-lg shadow-md border border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded">CAR #{car.carNumber}</span>
-                                {finding?.extensionStatus === ExtensionStatus.Pending && (
-                                    <span className="bg-purple-100 text-purple-800 text-xs font-bold px-2 py-1 rounded border border-purple-200 animate-pulse">Extension Requested</span>
-                                )}
-                                {car.auditeeStatus === 'Closed' && (
-                                     <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded border border-green-200">Closure Requested</span>
-                                )}
+            {activeTab === 'pending' && (
+                <div className="space-y-4">
+                    {carsToReview.length === 0 && <div className="p-8 text-center bg-gray-50 rounded-lg text-gray-500">No pending CARs to review.</div>}
+                    
+                    {carsToReview.map(car => {
+                        const finding = findings.find(f => f.id === car.findingId);
+                        const isCar2Plus = car.carNumber > 1;
+
+                        return (
+                        <div key={car.id} className="bg-white p-6 rounded-lg shadow-md border border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 transition-transform hover:shadow-lg">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className={`text-xs font-bold px-3 py-1 rounded text-white ${isCar2Plus ? 'bg-orange-500' : 'bg-blue-600'}`}>
+                                        CAR #{car.carNumber}
+                                    </span>
+                                    {finding?.extensionStatus === ExtensionStatus.Pending && (
+                                        <span className="bg-purple-100 text-purple-800 text-xs font-bold px-2 py-1 rounded border border-purple-200 animate-pulse">Extension Requested</span>
+                                    )}
+                                    {car.auditeeStatus === 'Closed' && (
+                                         <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded border border-green-200">Closure Requested</span>
+                                    )}
+                                </div>
+                                <h3 className="font-bold text-lg text-gray-800">{car.findingId}</h3>
+                                <p className="text-gray-600 text-sm mt-1">Submitted: {new Date(car.submissionDate).toLocaleDateString()}</p>
+                                <div className="mt-2 text-sm bg-gray-50 p-2 rounded border border-gray-100">
+                                    <span className="font-semibold text-gray-700">Latest Action:</span> {car.correctiveAction.substring(0, 150)}...
+                                </div>
                             </div>
-                            <h3 className="font-bold text-lg text-gray-800">{car.findingId}</h3>
-                            <p className="text-gray-600 text-sm mt-1">Submitted: {new Date(car.submissionDate).toLocaleDateString()}</p>
-                            <div className="mt-2 text-sm">
-                                <span className="font-semibold text-gray-700">Action:</span> {car.correctiveAction.substring(0, 100)}...
-                            </div>
+                            <button onClick={() => setSelectedCar(car)} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-6 rounded-lg shadow transition-transform transform hover:scale-105">
+                                Review CAR
+                            </button>
                         </div>
-                        <button onClick={() => setSelectedCar(car)} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-6 rounded-lg shadow transition-transform transform hover:scale-105">
-                            Review CAR
-                        </button>
-                    </div>
-                )})}
-            </div>
+                    )})}
+                </div>
+            )}
+
+            {activeTab === 'history' && (
+                <div className="bg-white rounded-xl shadow overflow-hidden">
+                    <table className="w-full text-sm text-left text-gray-500">
+                        <thead className="text-xs text-gray-700 uppercase bg-gray-100">
+                            <tr>
+                                <th className="px-6 py-3">CAR Ref</th>
+                                <th className="px-6 py-3">Finding ID</th>
+                                <th className="px-6 py-3">Submission Date</th>
+                                <th className="px-6 py-3">Review Date</th>
+                                <th className="px-6 py-3">Auditor Remarks</th>
+                                <th className="px-6 py-3 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {reviewedCars.map(car => (
+                                <tr key={car.id} className="border-b hover:bg-gray-50">
+                                    <td className="px-6 py-4 font-medium">CAR-{car.carNumber}</td>
+                                    <td className="px-6 py-4">{car.findingId}</td>
+                                    <td className="px-6 py-4">{new Date(car.submissionDate).toLocaleDateString()}</td>
+                                    <td className="px-6 py-4">{car.reviewDate ? new Date(car.reviewDate).toLocaleDateString() : '-'}</td>
+                                    <td className="px-6 py-4 truncate max-w-xs">{car.auditorRemarks}</td>
+                                    <td className="px-6 py-4 text-center">
+                                        <button onClick={() => setSelectedCar(car)} className="text-blue-600 hover:underline">View Details</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    {reviewedCars.length === 0 && <div className="p-6 text-center text-gray-500">No reviewed history found.</div>}
+                </div>
+            )}
 
              {selectedCar && (
-                <Modal title={`Review CAR ${selectedCar.carNumber} for ${selectedCar.findingId}`} onClose={() => setSelectedCar(null)}>
+                <Modal title={`Review: ${selectedCar.id} (CAR ${selectedCar.carNumber})`} onClose={() => setSelectedCar(null)} size="4xl">
                      <form onSubmit={handleReviewCar} className="space-y-6">
                         
                         {/* Status Requested Banner */}
@@ -341,7 +532,7 @@ const CarManagementPage: React.FC = () => {
                         </div>
 
                         {/* Extension Request Section inside Review Modal */}
-                        {findings.find(f => f.id === selectedCar.findingId)?.extensionStatus === ExtensionStatus.Pending && (
+                        {findings.find(f => f.id === selectedCar.findingId)?.extensionStatus === ExtensionStatus.Pending && selectedCar.status === 'Pending Review' && (
                             <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded shadow-sm">
                                 <h4 className="font-bold text-purple-800 mb-2 flex items-center gap-2">
                                     <span className="text-xl">⏳</span> Extension Requested
@@ -374,93 +565,130 @@ const CarManagementPage: React.FC = () => {
                             </div>
                         )}
 
-                        {/* History Context */}
-                        {cars.filter(c => c.findingId === selectedCar.findingId && c.id !== selectedCar.id).length > 0 && (
-                            <div className="bg-gray-100 p-3 rounded-md mb-4 max-h-40 overflow-y-auto">
-                                <h4 className="font-bold text-xs text-gray-500 uppercase mb-2">Previous History</h4>
-                                {cars.filter(c => c.findingId === selectedCar.findingId && c.id !== selectedCar.id).map(c => (
-                                    <div key={c.id} className="text-xs mb-2 border-b pb-1">
-                                        <span className="font-bold">CAR {c.carNumber}:</span> {c.status}
-                                        <p className="truncate text-gray-600">{c.correctiveAction}</p>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* LEFT COLUMN: Current Submission Details */}
+                            <div className="space-y-4">
+                                <h3 className="font-bold text-gray-800 border-b pb-2">Current Submission Details</h3>
+                                
+                                {/* Root Cause Section */}
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold text-gray-700 text-sm bg-gray-100 p-1 rounded">1. Root Cause Analysis</h4>
+                                    <div className="p-3 bg-white border border-gray-200 rounded text-gray-800 text-sm whitespace-pre-wrap shadow-sm">
+                                        {selectedCar.rootCause || findings.find(f => f.id === selectedCar.findingId)?.rootCause}
                                     </div>
-                                ))}
-                            </div>
-                        )}
+                                    {selectedCar.status === 'Pending Review' && (
+                                        <textarea 
+                                            placeholder="Auditor remarks on Root Cause..." 
+                                            value={rootCauseRemarks} 
+                                            onChange={e => setRootCauseRemarks(e.target.value)}
+                                            className="w-full border border-gray-300 rounded-md text-sm p-2 focus:ring-primary focus:border-primary bg-yellow-50"
+                                            rows={2}
+                                        />
+                                    )}
+                                </div>
 
-                        {/* Evidence Display */}
-                        {selectedCar.attachments && selectedCar.attachments.length > 0 && (
-                            <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-                                <h4 className="font-semibold text-blue-900 text-sm mb-2">Attached Evidence</h4>
-                                <div className="flex gap-2">
-                                    {selectedCar.attachments.map((att, i) => (
-                                        <div key={i} className="bg-white border p-2 rounded text-xs flex items-center text-blue-700">
-                                            <span className="truncate max-w-[150px]">📎 {att.name}</span>
-                                        </div>
-                                    ))}
+                                {/* Corrective Action Section */}
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold text-gray-700 text-sm bg-gray-100 p-1 rounded">2. Corrective Action Plan</h4>
+                                    <div className="p-3 bg-white border border-gray-200 rounded text-gray-800 text-sm whitespace-pre-wrap shadow-sm">
+                                        {selectedCar.correctiveAction}
+                                    </div>
+                                    {selectedCar.status === 'Pending Review' && (
+                                        <textarea 
+                                            placeholder="Auditor remarks on Corrective Action..." 
+                                            value={correctiveActionRemarks} 
+                                            onChange={e => setCorrectiveActionRemarks(e.target.value)}
+                                            className="w-full border border-gray-300 rounded-md text-sm p-2 focus:ring-primary focus:border-primary bg-yellow-50"
+                                            rows={2}
+                                        />
+                                    )}
+                                </div>
+
+                                {/* Evidence Section */}
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold text-gray-700 text-sm bg-gray-100 p-1 rounded">3. Evidence</h4>
+                                    <div className="p-3 bg-white border border-gray-200 rounded text-gray-800 text-sm mb-2">
+                                        {selectedCar.evidence}
+                                    </div>
+                                    
+                                    {/* ATTACHMENTS DISPLAY */}
+                                    <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
+                                        <h4 className="font-bold text-blue-900 text-xs uppercase mb-2">Attached Files (Downloadable)</h4>
+                                        {selectedCar.attachments && selectedCar.attachments.length > 0 ? (
+                                            renderAttachments(selectedCar.attachments)
+                                        ) : (
+                                            <p className="text-sm text-gray-500 italic">No files attached to this submission.</p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        )}
 
-                        {/* Root Cause Section */}
-                        <div className="space-y-2">
-                             <h4 className="font-semibold text-gray-700">1. Root Cause Analysis (Submitted by Auditee)</h4>
-                             <div className="p-3 bg-gray-50 border border-gray-200 rounded text-gray-800 text-sm whitespace-pre-wrap">{selectedCar.rootCause || findings.find(f => f.id === selectedCar.findingId)?.rootCause}</div>
-                             <textarea 
-                                placeholder="Auditor remarks on Root Cause..." 
-                                value={rootCauseRemarks} 
-                                onChange={e => setRootCauseRemarks(e.target.value)}
-                                className="w-full border border-gray-300 rounded-md text-sm p-2 focus:ring-primary focus:border-primary"
-                                rows={2}
-                             />
-                        </div>
+                            {/* RIGHT COLUMN: History & Decision */}
+                            <div className="space-y-6 flex flex-col h-full">
+                                
+                                {/* History Context */}
+                                <div className="bg-gray-50 p-4 rounded-md border border-gray-200 flex-1 overflow-y-auto max-h-96">
+                                    <h4 className="font-bold text-gray-700 text-sm uppercase mb-3 border-b pb-1">Submission History (Previous)</h4>
+                                    {cars.filter(c => c.findingId === selectedCar.findingId && c.id !== selectedCar.id).length > 0 ? (
+                                        cars.filter(c => c.findingId === selectedCar.findingId && c.id !== selectedCar.id).sort((a,b) => b.carNumber - a.carNumber).map(c => (
+                                            <div key={c.id} className="text-sm mb-3 bg-white p-3 rounded border shadow-sm">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="font-bold text-indigo-700">CAR {c.carNumber}</span>
+                                                    <span className="text-xs text-gray-500">{new Date(c.submissionDate).toLocaleDateString()}</span>
+                                                </div>
+                                                <div className="text-xs mb-2">
+                                                    <span className={`px-1 rounded ${c.status === 'Reviewed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                        {c.status}
+                                                    </span>
+                                                </div>
+                                                <p className="text-gray-700 line-clamp-2 mb-2">{c.correctiveAction}</p>
+                                                {c.attachments && c.attachments.length > 0 && (
+                                                    <div className="border-t pt-1 mt-1">
+                                                        <p className="text-xs font-semibold text-gray-500">Attachments:</p>
+                                                        {renderAttachments(c.attachments)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-gray-400 italic">No previous submission history.</p>
+                                    )}
+                                </div>
 
-                        {/* Corrective Action Section */}
-                         <div className="space-y-2">
-                             <h4 className="font-semibold text-gray-700">2. Corrective Action Plan (Submitted by Auditee)</h4>
-                             <div className="p-3 bg-gray-50 border border-gray-200 rounded text-gray-800 text-sm whitespace-pre-wrap">{selectedCar.correctiveAction}</div>
-                             <textarea 
-                                placeholder="Auditor remarks on Corrective Action..." 
-                                value={correctiveActionRemarks} 
-                                onChange={e => setCorrectiveActionRemarks(e.target.value)}
-                                className="w-full border border-gray-300 rounded-md text-sm p-2 focus:ring-primary focus:border-primary"
-                                rows={2}
-                             />
-                        </div>
+                                {/* Decision Area (Only if Pending) */}
+                                {selectedCar.status === 'Pending Review' && (
+                                    <div className="border-t pt-4 bg-gray-100 p-4 rounded-lg border-gray-300">
+                                        <h4 className="font-bold text-gray-800 mb-2">Final Review Decision</h4>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Overall Auditor Remarks</label>
+                                        <textarea value={remarks} onChange={e => setRemarks(e.target.value)} className="w-full border border-gray-300 rounded-md p-2 mb-4 focus:ring-primary focus:border-primary" rows={3} required placeholder="Summary of review..." />
 
-                        <div className="space-y-1 text-sm">
-                            <h4 className="font-semibold text-gray-700">3. Evidence Description</h4>
-                            <div className="p-3 bg-gray-50 border border-gray-200 rounded text-gray-800">{selectedCar.evidence}</div>
-                        </div>
+                                        <div className="flex items-center gap-4 bg-white p-4 rounded border border-gray-200 mb-4 shadow-sm">
+                                            <label className="flex items-center space-x-3 cursor-pointer select-none">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={closeFinding} 
+                                                    onChange={e => setCloseFinding(e.target.checked)}
+                                                    className="h-6 w-6 text-success focus:ring-success rounded border-gray-300"
+                                                />
+                                                <div>
+                                                    <span className={`font-bold block ${closeFinding ? 'text-green-700' : 'text-gray-800'}`}>
+                                                        {selectedCar.auditeeStatus === 'Closed' ? 'Verify & Close Finding' : 'Force Close Finding'}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">
+                                                        {selectedCar.auditeeStatus === 'Closed' 
+                                                            ? "Auditee requested closure. Check box to confirm." 
+                                                            : "Auditee did NOT request closure. Only check this if you disagree and want to close it now."}
+                                                    </span>
+                                                </div>
+                                            </label>
+                                        </div>
 
-                        {/* Decision */}
-                        <div className="border-t pt-6 bg-gray-50 -mx-6 px-6 pb-2 rounded-b-lg">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Overall Auditor Remarks</label>
-                            <textarea value={remarks} onChange={e => setRemarks(e.target.value)} className="w-full border border-gray-300 rounded-md p-2 mb-4 focus:ring-primary focus:border-primary" rows={3} required />
-
-                            <div className="flex items-center gap-4 bg-white p-4 rounded border border-gray-200 mb-4 shadow-sm">
-                                <label className="flex items-center space-x-3 cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={closeFinding} 
-                                        onChange={e => setCloseFinding(e.target.checked)}
-                                        className="h-6 w-6 text-success focus:ring-success rounded border-gray-300"
-                                    />
-                                    <div>
-                                        <span className="font-bold text-gray-800 block">
-                                            {selectedCar.auditeeStatus === 'Closed' ? 'Verify & Close Finding' : 'Force Close Finding'}
-                                        </span>
-                                        <span className="text-xs text-gray-500">
-                                            {selectedCar.auditeeStatus === 'Closed' 
-                                                ? "Auditee requested closure. Check box to confirm." 
-                                                : "Auditee did NOT request closure. Only check this if you disagree and want to close it now."}
-                                        </span>
+                                        <div className="flex justify-end space-x-4">
+                                            <button type="button" onClick={() => setSelectedCar(null)} className="bg-white border border-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-50">Cancel</button>
+                                            <button type="submit" className="bg-primary text-white font-bold py-2 px-6 rounded-lg hover:bg-primary-dark shadow-lg">Submit Review</button>
+                                        </div>
                                     </div>
-                                </label>
-                            </div>
-
-                            <div className="flex justify-end space-x-4">
-                                <button type="button" onClick={() => setSelectedCar(null)} className="bg-white border border-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-50">Cancel</button>
-                                <button type="submit" className="bg-primary text-white font-bold py-2 px-6 rounded-lg hover:bg-primary-dark shadow-lg">Submit Review</button>
+                                )}
                             </div>
                         </div>
                     </form>

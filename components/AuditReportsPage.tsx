@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '../contexts/AppContext';
-import { UserRole, AuditType, AuditStatus } from '../types';
+import { UserRole, AuditType, AuditStatus, Location } from '../types';
 import Modal from './shared/Modal';
 import AuditReportView from './AuditReportView';
 import { FileTextIcon } from './icons/FileTextIcon';
@@ -9,6 +9,7 @@ import { EditIcon } from './icons/EditIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
 import { ChevronDownIcon } from './icons/ChevronDownIcon';
 import CreateAuditModal from './CreateAuditModal';
+import MultiSelect from './shared/MultiSelect';
 
 const AuditReportsPage: React.FC = () => {
     const { audits, users, findings: allFindings, currentUser } = useAppContext();
@@ -17,6 +18,10 @@ const AuditReportsPage: React.FC = () => {
     const [editingAuditId, setEditingAuditId] = useState<string | null>(null);
     const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
     const exportMenuRef = useRef<HTMLDivElement>(null);
+
+    // Filters State
+    const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+    const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
 
     const canCreateAudit = currentUser?.role === UserRole.Auditor || currentUser?.department === 'Quality';
 
@@ -45,10 +50,17 @@ const AuditReportsPage: React.FC = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Filter Logic
+    const filteredAudits = audits.filter(audit => {
+        const statusMatch = selectedStatuses.length === 0 || selectedStatuses.includes(audit.status);
+        const locationMatch = selectedLocations.length === 0 || (audit.location && selectedLocations.includes(audit.location));
+        return statusMatch && locationMatch;
+    });
+
     const exportToCSV = () => {
         const headers = ['Ref No', 'Type', 'Title', 'Location', 'Department', 'Entity/Auditor', 'Date', 'Findings Count', 'Status'];
         
-        const rows = audits.map(audit => {
+        const rows = filteredAudits.map(audit => {
             const auditor = users.find(u => u.id === audit.auditorId);
             const isExternal = audit.type === AuditType.External;
             const auditorName = isExternal ? audit.externalEntity : auditor?.name;
@@ -88,9 +100,25 @@ const AuditReportsPage: React.FC = () => {
 
     return (
         <div className="container mx-auto">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Audit Reports</h1>
-                <div className="flex gap-3 print:hidden">
+                <div className="flex flex-wrap gap-3 print:hidden items-center">
+                    {/* Filters */}
+                    <div className="flex gap-2">
+                        <MultiSelect 
+                            label="Status" 
+                            options={Object.values(AuditStatus)} 
+                            selected={selectedStatuses} 
+                            onChange={setSelectedStatuses} 
+                        />
+                        <MultiSelect 
+                            label="Location" 
+                            options={Object.values(Location)} 
+                            selected={selectedLocations} 
+                            onChange={setSelectedLocations} 
+                        />
+                    </div>
+
                     {/* Export Button */}
                     <div className="relative" ref={exportMenuRef}>
                          <button 
@@ -143,7 +171,14 @@ const AuditReportsPage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {audits.map(audit => {
+                            {filteredAudits.length === 0 ? (
+                                <tr>
+                                    <td colSpan={10} className="text-center py-8 text-gray-500 italic">
+                                        No audits found matching the selected filters.
+                                    </td>
+                                </tr>
+                            ) : (
+                            filteredAudits.map(audit => {
                                 const auditor = users.find(u => u.id === audit.auditorId);
                                 const isExternal = audit.type === AuditType.External;
                                 return (
@@ -199,7 +234,7 @@ const AuditReportsPage: React.FC = () => {
                                     </td>
                                 </tr>
                                 )
-                            })}
+                            }))}
                         </tbody>
                     </table>
                 </div>
