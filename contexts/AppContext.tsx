@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { mockAudits, mockFindings, mockUsers, mockCars } from '../constants';
-import { User, Audit, Finding, CAR, UserRole, FindingStatus, AuditStatus, FindingLevel, AuditType, ExtensionStatus } from '../types';
+import { User, Audit, Finding, CAR, UserRole, FindingStatus, AuditStatus, FindingLevel, AuditType, ExtensionStatus, Notification } from '../types';
 
 interface AppContextType {
   currentUser: User | null;
@@ -11,10 +11,13 @@ interface AppContextType {
   cars: CAR[];
   users: User[];
   theme: 'light' | 'dark';
+  notifications: Notification[];
+  isNotificationDrawerOpen: boolean;
   login: (userId: number) => void;
   logout: () => void;
   setCurrentPage: (page: string) => void;
   toggleTheme: () => void;
+  toggleNotificationDrawer: () => void;
   addAudit: (auditData: Omit<Audit, 'id' | 'auditorId'>, findingsData: Omit<Finding, 'id' | 'auditId' | 'deadline' | 'status'>[]) => void;
   updateAudit: (auditId: string, auditData: Partial<Audit>, findingsData: Finding[]) => void;
   submitCar: (carData: Omit<CAR, 'id' | 'submittedById' | 'submissionDate' | 'status' | 'auditId'>) => void;
@@ -36,6 +39,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [audits, setAudits] = useState<Audit[]>(mockAudits);
   const [findings, setFindings] = useState<Finding[]>(mockFindings);
   const [cars, setCars] = useState<CAR[]>(mockCars);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
   
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -55,8 +60,122 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       localStorage.setItem('theme', theme);
   }, [theme]);
 
+  // Generate Notifications Logic
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const generatedNotifications: Notification[] = [];
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); 
+
+    const daysBetween = (date1: Date, date2: Date) => {
+        const oneDay = 1000 * 60 * 60 * 24;
+        const d1 = new Date(date1);
+        d1.setHours(0,0,0,0);
+        const d2 = new Date(date2);
+        d2.setHours(0,0,0,0);
+        const diffInTime = d2.getTime() - d1.getTime();
+        return Math.ceil(diffInTime / oneDay);
+    };
+    
+    // 1. CARs submitted for review (Auditor)
+    if (currentUser.role === UserRole.Auditor) {
+        cars.forEach(car => {
+            const audit = audits.find(a => a.id === car.auditId);
+            if (car.status === 'Pending Review' && audit?.auditorId === currentUser.id) {
+                generatedNotifications.push({
+                    id: generatedNotifications.length + 1,
+                    type: 'CAR_SUBMITTED',
+                    message: `New CAR submitted for ${car.findingId}.`,
+                    time: 'Just now'
+                });
+            }
+        });
+        // Extension Requests
+        findings.forEach(finding => {
+            const audit = audits.find(a => a.id === finding.auditId);
+            if (finding.extensionStatus === ExtensionStatus.Pending && audit?.auditorId === currentUser.id) {
+                generatedNotifications.push({
+                        id: generatedNotifications.length + 1,
+                        type: 'EXTENSION_REQUEST',
+                        message: `Extension requested for Finding ${finding.customId || finding.id}.`,
+                        time: 'Just now'
+                });
+            }
+        });
+    }
+    
+    // 2. Upcoming Audits
+    audits.forEach(audit => {
+        const auditDate = new Date(audit.date);
+        const daysUntil = daysBetween(now, auditDate);
+        if (daysUntil >= 0 && daysUntil <= 7) {
+                if ((currentUser.role === UserRole.Auditor && currentUser.id === audit.auditorId) || (currentUser.role === UserRole.Auditee && currentUser.id === audit.auditeeId)) {
+                generatedNotifications.push({
+                    id: generatedNotifications.length + 1,
+                    type: 'AUDIT_UPCOMING',
+                    message: `Audit ${audit.id} is scheduled in ${daysUntil} day(s).`,
+                    time: 'Just now'
+                });
+            }
+        }
+    });
+
+    // 3. Findings deadlines (Auditee)
+    if (currentUser.role === UserRole.Auditee) {
+        // Deadlines
+        findings.forEach(finding => {
+            const audit = audits.find(a => a.id === finding.auditId);
+            if (!finding.deadline || !audit || audit.auditeeId !== currentUser.id) return;
+            
+            if (finding.status === 'Open' || finding.status === 'Rejected') {
+                const deadlineDate = new Date(finding.deadline);
+                const daysUntil = daysBetween(now, deadlineDate);
+
+                if (daysUntil < 0) {
+                    generatedNotifications.push({
+                        id: generatedNotifications.length + 1,
+                        type: 'CAR_DUE',
+                        message: `Action for finding ${finding.customId || finding.id} is overdue by ${Math.abs(daysUntil)} day(s). Please submit CAR immediately.`,
+                        time: 'Just now'
+                    });
+                } else if (daysUntil >= 0 && daysUntil <= 3) {
+                    generatedNotifications.push({
+                        id: generatedNotifications.length + 1,
+                        type: 'FINDING_DUE',
+                        message: `Action for finding ${finding.customId || finding.id} is due ${daysUntil === 0 ? 'today' : `in ${daysUntil} day(s)`}.`,
+                        time: 'Just now'
+                    });
+                }
+            }
+        });
+
+        // Rejected CARs
+        cars.forEach(car => {
+            if (car.status === 'Rejected' && car.submittedById === currentUser.id) {
+                    // Check if finding is still in Rejected state
+                    const finding = findings.find(f => f.id === car.findingId);
+                    if (finding && finding.status === FindingStatus.Rejected) {
+                    generatedNotifications.push({
+                        id: generatedNotifications.length + 1,
+                        type: 'CAR_REJECTED',
+                        message: `CAR for finding ${finding.customId || finding.id} was rejected. Please review auditor remarks and resubmit.`,
+                        time: 'Action Required'
+                    });
+                    }
+            }
+        });
+    }
+
+    setNotifications(generatedNotifications);
+  }, [currentUser, audits, findings, cars]);
+
   const toggleTheme = () => {
       setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  const toggleNotificationDrawer = () => {
+      setIsNotificationDrawerOpen(prev => !prev);
   };
 
   const login = (userId: number) => {
@@ -107,7 +226,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const yearShort = new Date(auditData.date).getFullYear().toString().slice(-2);
       
       const newFindings: Finding[] = newFindingsData.map((f, index) => {
-          // If external and user provided custom ID, use it. Otherwise generate one.
           const autoId = `${month}${yearShort}-${String(findings.length + index + 1).padStart(3, '0')}`;
           
           return {
@@ -128,13 +246,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const updateAudit = (auditId: string, auditData: Partial<Audit>, findingsData: Finding[]) => {
       if(!currentUser || currentUser.role !== UserRole.Auditor) return;
 
-      // Update Audit
       setAudits(prev => prev.map(a => a.id === auditId ? { ...a, ...auditData } : a));
 
-      // Update Findings:
-      // Strategy: Remove all old findings for this audit and re-add the new list. 
-      // NOTE: This assumes we are in Draft/Editing mode where no CARs exist yet.
-      
       setFindings(prev => {
           const otherFindings = prev.filter(f => f.auditId !== auditId);
           
@@ -142,16 +255,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           const yearShort = new Date(auditData.date || new Date().toISOString()).getFullYear().toString().slice(-2);
 
           const updatedFindings = findingsData.map((f, index) => {
-             // Generate ID if it's a new temporary finding
              const id = f.id || `${month}${yearShort}-${String(prev.length + index + 1).padStart(3, '0')}`;
              
              return {
                  ...f,
                  id: id,
                  auditId: auditId,
-                 // Recalculate deadline if we are finalizing (not Draft)
                  deadline: auditData.status !== AuditStatus.Draft ? calculateDeadline(f.level, auditData.date || new Date().toISOString()) : undefined,
-                 status: FindingStatus.Open // Ensure status is Open if finalizing
+                 status: FindingStatus.Open
              };
           });
           
@@ -200,7 +311,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       
       setFindings(prev => prev.map(f => f.id === carToUpdate.findingId ? {...f, status: newFindingStatus} : f));
 
-      // Check if audit is complete
       const auditToUpdate = audits.find(a => a.id === carToUpdate.auditId);
       if (auditToUpdate) {
         const relatedFindings = findings.filter(f => f.auditId === auditToUpdate.id);
@@ -288,10 +398,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     cars,
     users,
     theme,
+    notifications,
+    isNotificationDrawerOpen,
     login,
     logout,
     setCurrentPage,
     toggleTheme,
+    toggleNotificationDrawer,
     addAudit,
     updateAudit,
     submitCar,

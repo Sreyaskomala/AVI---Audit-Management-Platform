@@ -11,6 +11,7 @@ import FindingsTrackerPage from './components/FindingsTrackerPage';
 import UserManagementPage from './components/UserManagementPage';
 import ProfilePage from './components/ProfilePage';
 import AuditPlanningPage from './components/AuditPlanningPage';
+import NotificationDrawer from './components/NotificationDrawer';
 
 const App: React.FC = () => {
   const { currentUser, currentPage } = useAppContext();
@@ -50,6 +51,7 @@ const App: React.FC = () => {
           {renderPage()}
         </main>
       </div>
+      <NotificationDrawer />
     </div>
   );
 };

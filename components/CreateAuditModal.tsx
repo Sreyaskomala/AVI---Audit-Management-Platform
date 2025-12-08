@@ -25,7 +25,7 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
     const [findings, setFindings] = useState<Partial<Finding>[]>([]);
     const [auditType, setAuditType] = useState<AuditType>(AuditType.Internal);
     const [externalEntity, setExternalEntity] = useState('');
-    const [location, setLocation] = useState<Location>(Location.GURUGRAM_1);
+    const [location, setLocation] = useState<Location>(Location.LOCATION_1);
     const [fstdId, setFstdId] = useState('');
 
     useEffect(() => {
@@ -39,7 +39,7 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
                 setReportDate(existingAudit.reportDate || new Date().toISOString().split('T')[0]);
                 setAuditType(existingAudit.type);
                 setExternalEntity(existingAudit.externalEntity || '');
-                setLocation(existingAudit.location || Location.GURUGRAM_1);
+                setLocation(existingAudit.location || Location.LOCATION_1);
                 setFstdId(existingAudit.fstdId || '');
                 // Deep copy findings to avoid mutating context directly before save
                 setFindings(existingFindings ? existingFindings.map(f => ({...f})) : []);

@@ -27,10 +27,9 @@ export enum AuditType {
 }
 
 export enum Location {
-    GURUGRAM_1 = 'Gurugram 1',
-    GURUGRAM_2 = 'Gurugram 2',
-    HYDERABAD = 'Hyderabad',
-    MUMBAI= 'Mumbai ',
+    LOCATION_1 = 'Location 1',
+    LOCATION_2 = 'Location 2',
+    LOCATION_3 = 'Location 3',
 }
 
 export enum FindingLevel {

@@ -22,7 +22,7 @@ export const mockAudits: Audit[] = [
     reportDate: '2025-10-18',
     status: AuditStatus.CARPending,
     type: AuditType.Internal,
-    location: Location.GURUGRAM_1,
+    location: Location.LOCATION_1,
     fstdId: 'FSTD 1',
   },
   {
@@ -35,7 +35,7 @@ export const mockAudits: Audit[] = [
     reportDate: '2025-10-12',
     status: AuditStatus.Completed,
     type: AuditType.Internal,
-    location: Location.HYDERABAD,
+    location: Location.LOCATION_2,
   },
   {
     id: 'AR/2025/019',
@@ -47,7 +47,7 @@ export const mockAudits: Audit[] = [
     reportDate: '2025-09-30',
     status: AuditStatus.Overdue,
     type: AuditType.Internal,
-    location: Location.GURUGRAM_2,
+    location: Location.LOCATION_3,
   },
   {
     id: 'EXT/2025/001',
@@ -61,7 +61,7 @@ export const mockAudits: Audit[] = [
     status: AuditStatus.CARPending,
     type: AuditType.External,
     externalEntity: 'Civil Aviation Authority',
-    location: Location.GURUGRAM_1,
+    location: Location.LOCATION_1,
   },
 ];
 

@@ -14,7 +14,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
-  const { currentUser, logout, setCurrentPage, theme, toggleTheme } = useAppContext();
+  const { currentUser, logout, setCurrentPage, theme, toggleTheme, toggleNotificationDrawer, notifications } = useAppContext();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -29,7 +29,7 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   }, []);
   
   return (
-    <header className="flex items-center justify-between px-6 py-3 bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 shadow-sm transition-colors duration-200">
+    <header className="flex items-center justify-between px-6 py-3 bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 shadow-sm transition-colors duration-200 print:hidden">
       <div className="flex items-center">
         <button onClick={() => setSidebarOpen(true)} className="text-gray-500 dark:text-gray-400 focus:outline-none lg:hidden">
             <MenuIcon className="h-6 w-6" />
@@ -55,12 +55,14 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
             {theme === 'light' ? <MoonIcon className="h-5 w-5" /> : <SunIcon className="h-5 w-5" />}
         </button>
 
-        <div className="relative">
+        <div className="relative" onClick={toggleNotificationDrawer}>
           <BellIcon className="h-6 w-6 text-gray-600 dark:text-gray-300 hover:text-primary cursor-pointer" />
-          <span className="absolute -top-1 -right-1 flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-danger"></span>
-          </span>
+          {notifications.length > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-danger"></span>
+            </span>
+          )}
         </div>
         
         <div className="relative" ref={dropdownRef}>
