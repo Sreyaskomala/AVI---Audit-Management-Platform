@@ -277,12 +277,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       setCars(prev => [...prev, newCar]);
 
-      // Update finding status to indicate activity, and handle extension if present
+      // Update finding status and Root Cause if first time
       setFindings(prev => prev.map(f => {
           if (f.id === carData.findingId) {
               return {
                   ...f, 
-                  status: FindingStatus.CARSubmitted, // This status triggers visibility for Auditor
+                  status: FindingStatus.CARSubmitted, 
+                  // If Finding Root Cause is empty, use the one from this CAR
+                  rootCause: f.rootCause || carData.rootCause,
                   // If extension requested, update the fields
                   ...(extensionRequest ? {
                       extensionStatus: ExtensionStatus.Pending,
@@ -324,8 +326,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (f.id === carToUpdate.findingId) {
              let updatedFinding = { ...f };
              
-             // If Close Finding is selected, close it. 
-             // If NOT selected, revert status to Open (or Rejected if remarks imply) so Auditee can submit CAR 2, 3 etc.
+             // Logic:
+             // If Auditor selects 'Close Finding' -> Closed.
+             // If Auditor does NOT select 'Close Finding' -> Reverts to Open (for next CAR) or Rejected.
              updatedFinding.status = closeFinding ? FindingStatus.Closed : FindingStatus.Open;
 
              // Handle Extension Decision if provided

@@ -74,6 +74,9 @@ export interface Finding {
   deadline?: string;
   status: FindingStatus;
   
+  // Root Cause Logic - Persists on the finding once set
+  rootCause?: string; 
+
   // Extension Logic
   extensionStatus?: ExtensionStatus;
   extensionReason?: string;
@@ -87,12 +90,17 @@ export interface CAR {
   carNumber: number; // 1, 2, 3...
   submittedById: number;
   submissionDate: string;
-  rootCause: string;
+  
+  // Submissions
+  rootCause?: string; // Captured here for history, but mainly populates Finding.rootCause
   correctiveAction: string;
   evidence: string;
   attachments?: Attachment[]; // Evidence files
   proposedClosureDate: string;
-  status: 'Pending Review' | 'Reviewed'; // Changed from Approved/Rejected to simply Reviewed, outcome determines finding status
+  
+  auditeeStatus: 'Open' | 'Closed'; // Auditee declares if this is just an update (Open) or ready for verification (Closed)
+
+  status: 'Pending Review' | 'Reviewed'; 
   auditorRemarks?: string;
   rootCauseRemarks?: string;
   correctiveActionRemarks?: string;

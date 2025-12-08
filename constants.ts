@@ -85,6 +85,7 @@ export const mockFindings: Finding[] = [
         description: 'The examination environment did not meet the required standards.',
         deadline: '2025-10-22',
         status: FindingStatus.CARSubmitted,
+        rootCause: 'The designated examination room was temporarily unavailable due to maintenance.',
     },
     {
         id: 'SEP25-005',
@@ -104,6 +105,7 @@ export const mockFindings: Finding[] = [
         level: FindingLevel.OBSERVATION,
         description: 'Safety meeting minutes could be more detailed to better track action items.',
         status: FindingStatus.Closed,
+        rootCause: 'Lack of standard template.',
     },
     {
         id: 'EXT-001',
@@ -135,6 +137,7 @@ export const mockCars: CAR[] = [
         evidence: 'Updated facility manual (doc #FM-002), photos of new room.',
         attachments: [{ name: 'new_room_photo.jpg', type: 'image', url: '#' }],
         proposedClosureDate: '2025-10-25',
+        auditeeStatus: 'Closed',
         status: 'Pending Review',
     }
 ];

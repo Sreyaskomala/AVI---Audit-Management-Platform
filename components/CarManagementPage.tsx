@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { UserRole, Finding, CAR, FindingStatus, Attachment, ExtensionStatus } from '../types';
 import Modal from './shared/Modal';
@@ -17,6 +17,9 @@ const CarManagementPage: React.FC = () => {
     const [proposedClosureDate, setProposedClosureDate] = useState('');
     const [attachments, setAttachments] = useState<Attachment[]>([]);
     
+    // New: Auditee Intent
+    const [auditeeStatus, setAuditeeStatus] = useState<'Open' | 'Closed'>('Open');
+
     // Extension within CAR submission
     const [requestExtensionWithCar, setRequestExtensionWithCar] = useState(false);
     const [extensionDateWithCar, setExtensionDateWithCar] = useState('');
@@ -33,6 +36,30 @@ const CarManagementPage: React.FC = () => {
     const [correctiveActionRemarks, setCorrectiveActionRemarks] = useState('');
     const [closeFinding, setCloseFinding] = useState(false);
     const [approveExtension, setApproveExtension] = useState<boolean | null>(null); // null = no action, true = approve, false = reject
+
+    // Reset fields when finding is selected
+    useEffect(() => {
+        if (selectedFinding) {
+            // If finding already has a root cause, pre-fill it
+            if (selectedFinding.rootCause) {
+                setRootCause(selectedFinding.rootCause);
+            } else {
+                setRootCause('');
+            }
+            setCorrectiveAction('');
+            setEvidence('');
+            setProposedClosureDate('');
+            setAttachments([]);
+            setAuditeeStatus('Open');
+        }
+    }, [selectedFinding]);
+
+    // Set initial close state based on Auditee's request when reviewing
+    useEffect(() => {
+        if (selectedCar) {
+            setCloseFinding(selectedCar.auditeeStatus === 'Closed');
+        }
+    }, [selectedCar]);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -56,6 +83,7 @@ const CarManagementPage: React.FC = () => {
                 evidence,
                 attachments,
                 proposedClosureDate,
+                auditeeStatus
             }, requestExtensionWithCar ? { date: extensionDateWithCar, reason: extensionReasonWithCar } : undefined);
             
             setSelectedFinding(null);
@@ -100,19 +128,12 @@ const CarManagementPage: React.FC = () => {
         return audit?.auditorId === currentUser?.id && c.status === 'Pending Review';
     });
 
-    // Helper to see if a specific finding has a pending extension
-    const getPendingExtension = (findingId: string) => {
-        return findings.find(f => f.id === findingId && f.extensionStatus === ExtensionStatus.Pending);
-    }
-
     // --- Auditee View ---
     if (currentUser?.role === UserRole.Auditee) {
         return (
             <div className="container mx-auto">
                 <div className="flex space-x-4 mb-6">
                     <button onClick={() => setActiveTab('submissions')} className={`px-4 py-2 font-bold rounded-lg ${activeTab === 'submissions' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'}`}>My Findings & Actions</button>
-                    {/* Hiding standalone Extension tab if we want to force merged workflow, but keeping for flexibility if needed. 
-                        Prompt says "Request extension should be along with the CAR submission", so we prioritize the submissions tab. */}
                 </div>
 
                 {activeTab === 'submissions' && (
@@ -195,8 +216,19 @@ const CarManagementPage: React.FC = () => {
                                 Please provide the Corrective Action Report details below. You can also request a deadline extension if the issue requires more time to resolve.
                             </div>
 
-                            <div><label className="block text-sm font-medium">Root Cause Analysis</label><textarea value={rootCause} onChange={e => setRootCause(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required /></div>
-                            <div><label className="block text-sm font-medium">Corrective Action Taken</label><textarea value={correctiveAction} onChange={e => setCorrectiveAction(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required /></div>
+                            <div>
+                                <label className="block text-sm font-medium">Root Cause Analysis</label>
+                                {selectedFinding.rootCause ? (
+                                    <div className="mt-1 w-full bg-gray-100 border border-gray-300 rounded-md p-2 text-gray-700">
+                                        {selectedFinding.rootCause}
+                                        <div className="text-xs text-gray-500 mt-1 italic">Root cause established in previous CAR. Read-only.</div>
+                                    </div>
+                                ) : (
+                                    <textarea value={rootCause} onChange={e => setRootCause(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required placeholder="Enter the root cause of the finding..." />
+                                )}
+                            </div>
+                            
+                            <div><label className="block text-sm font-medium">Corrective Action Taken / Update</label><textarea value={correctiveAction} onChange={e => setCorrectiveAction(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required placeholder="What actions have been taken since last update?" /></div>
                             <div><label className="block text-sm font-medium">Evidence Description</label><textarea value={evidence} onChange={e => setEvidence(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required /></div>
                             
                             {/* Evidence Upload */}
@@ -208,6 +240,21 @@ const CarManagementPage: React.FC = () => {
 
                             <div><label className="block text-sm font-medium">Proposed Closure Date</label><input type="date" value={proposedClosureDate} onChange={e => setProposedClosureDate(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required /></div>
                             
+                            {/* Submission Status Intent */}
+                            <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+                                <label className="block text-sm font-medium mb-2">Submission Status</label>
+                                <div className="space-y-2">
+                                    <label className="flex items-center space-x-2 cursor-pointer">
+                                        <input type="radio" name="auditeeStatus" checked={auditeeStatus === 'Open'} onChange={() => setAuditeeStatus('Open')} className="text-primary focus:ring-primary" />
+                                        <span>Work in Progress (Keep Open)</span>
+                                    </label>
+                                    <label className="flex items-center space-x-2 cursor-pointer">
+                                        <input type="radio" name="auditeeStatus" checked={auditeeStatus === 'Closed'} onChange={() => setAuditeeStatus('Closed')} className="text-primary focus:ring-primary" />
+                                        <span className="font-bold text-green-700">Corrective Action Complete (Ready for Closure Verification)</span>
+                                    </label>
+                                </div>
+                            </div>
+
                             {/* Integrated Extension Request */}
                             <div className="mt-6 border-t pt-4 bg-yellow-50/50 p-4 rounded-lg border border-yellow-100">
                                 <div className="flex items-center">
@@ -260,6 +307,9 @@ const CarManagementPage: React.FC = () => {
                                 {finding?.extensionStatus === ExtensionStatus.Pending && (
                                     <span className="bg-purple-100 text-purple-800 text-xs font-bold px-2 py-1 rounded border border-purple-200 animate-pulse">Extension Requested</span>
                                 )}
+                                {car.auditeeStatus === 'Closed' && (
+                                     <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded border border-green-200">Closure Requested</span>
+                                )}
                             </div>
                             <h3 className="font-bold text-lg text-gray-800">{car.findingId}</h3>
                             <p className="text-gray-600 text-sm mt-1">Submitted: {new Date(car.submissionDate).toLocaleDateString()}</p>
@@ -278,6 +328,18 @@ const CarManagementPage: React.FC = () => {
                 <Modal title={`Review CAR ${selectedCar.carNumber} for ${selectedCar.findingId}`} onClose={() => setSelectedCar(null)}>
                      <form onSubmit={handleReviewCar} className="space-y-6">
                         
+                        {/* Status Requested Banner */}
+                        <div className={`p-4 rounded border-l-4 ${selectedCar.auditeeStatus === 'Closed' ? 'bg-green-50 border-green-500 text-green-800' : 'bg-blue-50 border-blue-500 text-blue-800'}`}>
+                            <h4 className="font-bold flex items-center gap-2">
+                                Auditee Status: {selectedCar.auditeeStatus === 'Closed' ? 'Ready for Closure Verification' : 'Work in Progress (Update Only)'}
+                            </h4>
+                            <p className="text-sm mt-1">
+                                {selectedCar.auditeeStatus === 'Closed' 
+                                    ? "The auditee believes corrective actions are complete. Please verify evidence and decide whether to Close the finding." 
+                                    : "This is a progress update. The finding is expected to remain Open."}
+                            </p>
+                        </div>
+
                         {/* Extension Request Section inside Review Modal */}
                         {findings.find(f => f.id === selectedCar.findingId)?.extensionStatus === ExtensionStatus.Pending && (
                             <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded shadow-sm">
@@ -342,7 +404,7 @@ const CarManagementPage: React.FC = () => {
                         {/* Root Cause Section */}
                         <div className="space-y-2">
                              <h4 className="font-semibold text-gray-700">1. Root Cause Analysis (Submitted by Auditee)</h4>
-                             <div className="p-3 bg-gray-50 border border-gray-200 rounded text-gray-800 text-sm whitespace-pre-wrap">{selectedCar.rootCause}</div>
+                             <div className="p-3 bg-gray-50 border border-gray-200 rounded text-gray-800 text-sm whitespace-pre-wrap">{selectedCar.rootCause || findings.find(f => f.id === selectedCar.findingId)?.rootCause}</div>
                              <textarea 
                                 placeholder="Auditor remarks on Root Cause..." 
                                 value={rootCauseRemarks} 
@@ -384,9 +446,13 @@ const CarManagementPage: React.FC = () => {
                                         className="h-6 w-6 text-success focus:ring-success rounded border-gray-300"
                                     />
                                     <div>
-                                        <span className="font-bold text-gray-800 block">Close this Finding?</span>
+                                        <span className="font-bold text-gray-800 block">
+                                            {selectedCar.auditeeStatus === 'Closed' ? 'Verify & Close Finding' : 'Force Close Finding'}
+                                        </span>
                                         <span className="text-xs text-gray-500">
-                                            Check this ONLY if the issue is fully resolved. Unchecked means the finding remains OPEN for another CAR cycle.
+                                            {selectedCar.auditeeStatus === 'Closed' 
+                                                ? "Auditee requested closure. Check box to confirm." 
+                                                : "Auditee did NOT request closure. Only check this if you disagree and want to close it now."}
                                         </span>
                                     </div>
                                 </label>

@@ -215,6 +215,14 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
                                                 </ul>
                                             </div>
                                         )}
+
+                                        {/* Display Root Cause from Finding if available */}
+                                        {finding.rootCause && (
+                                            <div className="mt-3 pt-3 border-t border-gray-200">
+                                                <strong>Root Cause Analysis:</strong>
+                                                <p className="mt-1 bg-white p-2 border rounded text-gray-800">{finding.rootCause}</p>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Render History of CARs */}
@@ -227,15 +235,15 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
                                                     <div key={car.id} className="bg-white p-4 rounded border border-gray-200 text-sm text-gray-700 shadow-sm">
                                                         <div className="flex justify-between border-b pb-2 mb-2">
                                                             <strong className="text-indigo-800">CAR {car.carNumber} ({new Date(car.submissionDate).toLocaleDateString()})</strong>
-                                                            <span className="text-xs text-gray-500">Reviewed Date: {car.reviewDate ? new Date(car.reviewDate).toLocaleDateString() : 'Pending'}</span>
+                                                            <div className="text-right">
+                                                                <span className="block text-xs font-bold text-gray-600">{car.auditeeStatus === 'Closed' ? 'Closure Requested' : 'Progress Update'}</span>
+                                                                <span className="text-xs text-gray-400">Reviewed: {car.reviewDate ? new Date(car.reviewDate).toLocaleDateString() : 'Pending'}</span>
+                                                            </div>
                                                         </div>
 
                                                         <div className="space-y-2">
-                                                            <div>
-                                                                <strong className="text-gray-800 block text-xs uppercase">Root Cause Analysis:</strong>
-                                                                <p className="bg-gray-50 p-2 rounded">{car.rootCause}</p>
-                                                                {car.rootCauseRemarks && <p className="text-xs text-red-600 mt-1 italic pl-2 border-l-2 border-red-300"> Auditor: {car.rootCauseRemarks}</p>}
-                                                            </div>
+                                                            {/* We don't need Root Cause here if displayed above, unless specifically needed for history context. User requested "root cause should not change". So displaying it once above is cleaner. */}
+                                                            
                                                             <div>
                                                                 <strong className="text-gray-800 block text-xs uppercase">Corrective Action:</strong>
                                                                 <p className="bg-gray-50 p-2 rounded">{car.correctiveAction}</p>
