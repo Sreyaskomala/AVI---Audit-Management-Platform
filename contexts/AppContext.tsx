@@ -149,6 +149,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 }
             }
         });
+
+        // 4. CAR Rejected Notification (Auditee)
+        findings.forEach(finding => {
+            const audit = audits.find(a => a.id === finding.auditId);
+            if (audit?.auditeeId === currentUser.id && finding.status === FindingStatus.Rejected) {
+                 // Find the latest reviewed CAR to get remarks
+                 const relevantCars = cars.filter(c => c.findingId === finding.id && c.status === 'Reviewed').sort((a, b) => b.carNumber - a.carNumber);
+                 const latestRejectedCar = relevantCars[0];
+                 
+                 if (latestRejectedCar) {
+                      generatedNotifications.push({
+                         id: generatedNotifications.length + 1,
+                         type: 'CAR_REJECTED',
+                         message: `CAR ${latestRejectedCar.carNumber} for finding ${finding.customId || finding.id} was rejected. Auditor Remarks: "${latestRejectedCar.auditorRemarks}"`,
+                         time: latestRejectedCar.reviewDate || 'Recently'
+                     });
+                 }
+            }
+        });
     }
 
     setNotifications(generatedNotifications);
@@ -328,8 +347,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
              
              // Logic:
              // If Auditor selects 'Close Finding' -> Closed.
-             // If Auditor does NOT select 'Close Finding' -> Reverts to Open (for next CAR) or Rejected.
-             updatedFinding.status = closeFinding ? FindingStatus.Closed : FindingStatus.Open;
+             // If Auditor does NOT select 'Close Finding' -> Reverts to Rejected (was Open).
+             updatedFinding.status = closeFinding ? FindingStatus.Closed : FindingStatus.Rejected;
 
              // Handle Extension Decision if provided
              if (extensionDecision) {

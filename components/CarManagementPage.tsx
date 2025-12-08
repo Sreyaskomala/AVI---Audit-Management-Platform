@@ -6,6 +6,7 @@ import Modal from './shared/Modal';
 import { DownloadIcon } from './icons/DownloadIcon';
 import { FileTextIcon } from './icons/FileTextIcon';
 import { CheckCircleIcon } from './icons/CheckCircleIcon';
+import AuditReportView from './AuditReportView';
 
 const CarManagementPage: React.FC = () => {
     const { currentUser, findings, cars, users, submitCar, reviewCar, requestExtension, processExtension } = useAppContext();
@@ -34,6 +35,9 @@ const CarManagementPage: React.FC = () => {
     const [correctiveActionRemarks, setCorrectiveActionRemarks] = useState('');
     const [closeFinding, setCloseFinding] = useState(false);
     const [approveExtension, setApproveExtension] = useState<boolean | null>(null); 
+    
+    // State for Viewing Full Report
+    const [reportViewId, setReportViewId] = useState<string | null>(null);
 
     // Reset fields when finding is selected
     useEffect(() => {
@@ -205,18 +209,26 @@ const CarManagementPage: React.FC = () => {
                             return (
                                 <div key={finding.id} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col md:flex-row gap-6">
                                     <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className={`px-2 py-1 text-xs font-bold rounded ${finding.level.includes('1') ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'}`}>
-                                                {finding.level}
-                                            </span>
-                                            <h3 className="font-bold text-lg text-gray-800 dark:text-white">{finding.customId || finding.id}</h3>
-                                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                                                finding.status === FindingStatus.Open ? 'bg-blue-100 text-blue-800' :
-                                                finding.status === FindingStatus.CARSubmitted ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-gray-100 text-gray-800'
-                                            }`}>
-                                                {finding.status}
-                                            </span>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`px-2 py-1 text-xs font-bold rounded ${finding.level.includes('1') ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'}`}>
+                                                    {finding.level}
+                                                </span>
+                                                <h3 className="font-bold text-lg text-gray-800 dark:text-white">{finding.customId || finding.id}</h3>
+                                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                                    finding.status === FindingStatus.Open ? 'bg-blue-100 text-blue-800' :
+                                                    finding.status === FindingStatus.CARSubmitted ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-gray-100 text-gray-800'
+                                                }`}>
+                                                    {finding.status}
+                                                </span>
+                                            </div>
+                                            <button 
+                                                onClick={() => setReportViewId(finding.auditId)}
+                                                className="text-xs text-primary hover:underline font-medium flex items-center gap-1"
+                                            >
+                                                <FileTextIcon className="h-3 w-3" /> View Audit Report
+                                            </button>
                                         </div>
                                         
                                         <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-md mb-4 text-sm text-gray-700 dark:text-gray-300">
@@ -287,11 +299,19 @@ const CarManagementPage: React.FC = () => {
                                             <h3 className="font-bold text-gray-800 dark:text-white">{finding.customId || finding.id}</h3>
                                             <p className="text-xs text-gray-500 truncate max-w-md">{finding.description}</p>
                                         </div>
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                            finding.status === FindingStatus.Closed ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                                        }`}>
-                                            {finding.status}
-                                        </span>
+                                        <div className="flex items-center gap-3">
+                                            <button 
+                                                onClick={() => setReportViewId(finding.auditId)}
+                                                className="text-xs bg-white border border-gray-300 px-2 py-1 rounded hover:bg-gray-50"
+                                            >
+                                                View Report
+                                            </button>
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                                finding.status === FindingStatus.Closed ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                                            }`}>
+                                                {finding.status}
+                                            </span>
+                                        </div>
                                     </div>
                                     <div className="p-6">
                                         <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">Submission Timeline</h4>
@@ -475,9 +495,14 @@ const CarManagementPage: React.FC = () => {
                                     <span className="font-semibold text-gray-700">Latest Action:</span> {car.correctiveAction.substring(0, 150)}...
                                 </div>
                             </div>
-                            <button onClick={() => setSelectedCar(car)} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-6 rounded-lg shadow transition-transform transform hover:scale-105">
-                                Review CAR
-                            </button>
+                            <div className="flex flex-col gap-2">
+                                <button onClick={() => setSelectedCar(car)} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-6 rounded-lg shadow transition-transform transform hover:scale-105">
+                                    Review CAR
+                                </button>
+                                <button onClick={() => setReportViewId(car.auditId)} className="text-sm text-gray-500 hover:text-gray-800 underline text-center">
+                                    View Report
+                                </button>
+                            </div>
                         </div>
                     )})}
                 </div>
@@ -634,7 +659,7 @@ const CarManagementPage: React.FC = () => {
                                             <div key={c.id} className="text-sm mb-3 bg-white p-3 rounded border shadow-sm">
                                                 <div className="flex justify-between items-center mb-1">
                                                     <span className="font-bold text-indigo-700">CAR {c.carNumber}</span>
-                                                    <span className="text-xs text-gray-500">{new Date(c.submissionDate).toLocaleDateString()}</span>
+                                                    <span className="text-xs text-gray-500">{new Date(c.submissionDate).toLocaleDateString()}</time>
                                                 </div>
                                                 <div className="text-xs mb-2">
                                                     <span className={`px-1 rounded ${c.status === 'Reviewed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
@@ -694,6 +719,13 @@ const CarManagementPage: React.FC = () => {
                     </form>
                 </Modal>
              )}
+
+            {/* View Full Report Modal */}
+            {reportViewId && (
+                <Modal size="4xl" title={`Audit Report: ${reportViewId}`} onClose={() => setReportViewId(null)}>
+                    <AuditReportView auditId={reportViewId} />
+                </Modal>
+            )}
         </div>
     );
 };

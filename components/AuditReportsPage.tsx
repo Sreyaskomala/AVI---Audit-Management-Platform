@@ -52,6 +52,13 @@ const AuditReportsPage: React.FC = () => {
 
     // Filter Logic
     const filteredAudits = audits.filter(audit => {
+        // Permission Filter: If Auditor, see all. If Auditee, see only assignments.
+        const rolePermission = currentUser?.role === UserRole.Auditor 
+            ? true 
+            : audit.auditeeId === currentUser?.id;
+
+        if (!rolePermission) return false;
+
         const statusMatch = selectedStatuses.length === 0 || selectedStatuses.includes(audit.status);
         const locationMatch = selectedLocations.length === 0 || (audit.location && selectedLocations.includes(audit.location));
         return statusMatch && locationMatch;
@@ -141,7 +148,7 @@ const AuditReportsPage: React.FC = () => {
                          )}
                     </div>
 
-                    {/* Create Button */}
+                    {/* Create Button - Only for Auditors/Quality */}
                     {canCreateAudit && (
                         <button 
                             onClick={() => { setEditingAuditId(null); setCreateModalOpen(true); }}

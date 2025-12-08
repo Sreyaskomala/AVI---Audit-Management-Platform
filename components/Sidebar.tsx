@@ -61,11 +61,12 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
 
                 <nav className="flex-grow px-4 py-6 space-y-2">
                    <NavLink icon={<BarChartIcon className="h-5 w-5" />} text="Dashboard" pageKey="dashboard" />
+                   
+                   {/* Audit Reports visible to everyone now */}
+                   <NavLink icon={<FileTextIcon className="h-5 w-5" />} text="Audit Reports" pageKey="audit-reports" />
+                   
                    {currentUser?.role === UserRole.Auditor && (
-                    <>
-                        <NavLink icon={<FileTextIcon className="h-5 w-5" />} text="Audit Reports" pageKey="audit-reports" />
                         <NavLink icon={<AlertTriangleIcon className="h-5 w-5" />} text="Findings Tracker" pageKey="findings-tracker" />
-                    </>
                    )}
                    <NavLink icon={<ClipboardListIcon className="h-5 w-5" />} text="CAR Management" pageKey="car-management"/>
                    {currentUser?.role === UserRole.Auditor && (
