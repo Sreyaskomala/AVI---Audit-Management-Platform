@@ -22,7 +22,7 @@ const CarManagementPage: React.FC = () => {
     const [extensionDateWithCar, setExtensionDateWithCar] = useState('');
     const [extensionReasonWithCar, setExtensionReasonWithCar] = useState('');
     
-    // State for Extension (Stand alone)
+    // State for Extension (Stand alone - rarely used now but kept for legacy)
     const [extensionFinding, setExtensionFinding] = useState<Finding | null>(null);
     const [extensionDate, setExtensionDate] = useState('');
     const [extensionReason, setExtensionReason] = useState('');
@@ -32,6 +32,7 @@ const CarManagementPage: React.FC = () => {
     const [rootCauseRemarks, setRootCauseRemarks] = useState('');
     const [correctiveActionRemarks, setCorrectiveActionRemarks] = useState('');
     const [closeFinding, setCloseFinding] = useState(false);
+    const [approveExtension, setApproveExtension] = useState<boolean | null>(null); // null = no action, true = approve, false = reject
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -76,9 +77,16 @@ const CarManagementPage: React.FC = () => {
     const handleReviewCar = (e: React.FormEvent) => {
         e.preventDefault();
         if (selectedCar && remarks) {
-            reviewCar(selectedCar.id, remarks, rootCauseRemarks, correctiveActionRemarks, closeFinding);
+            reviewCar(
+                selectedCar.id, 
+                remarks, 
+                rootCauseRemarks, 
+                correctiveActionRemarks, 
+                closeFinding, 
+                approveExtension === true ? 'Approved' : approveExtension === false ? 'Rejected' : undefined
+            );
             setSelectedCar(null);
-            setRemarks(''); setRootCauseRemarks(''); setCorrectiveActionRemarks(''); setCloseFinding(false);
+            setRemarks(''); setRootCauseRemarks(''); setCorrectiveActionRemarks(''); setCloseFinding(false); setApproveExtension(null);
         }
     };
 
@@ -92,10 +100,10 @@ const CarManagementPage: React.FC = () => {
         return audit?.auditorId === currentUser?.id && c.status === 'Pending Review';
     });
 
-    const extensionsToReview = findings.filter(f => {
-        const audit = useAppContext().audits.find(a => a.id === f.auditId);
-        return audit?.auditorId === currentUser?.id && f.extensionStatus === ExtensionStatus.Pending;
-    });
+    // Helper to see if a specific finding has a pending extension
+    const getPendingExtension = (findingId: string) => {
+        return findings.find(f => f.id === findingId && f.extensionStatus === ExtensionStatus.Pending);
+    }
 
     // --- Auditee View ---
     if (currentUser?.role === UserRole.Auditee) {
@@ -103,7 +111,8 @@ const CarManagementPage: React.FC = () => {
             <div className="container mx-auto">
                 <div className="flex space-x-4 mb-6">
                     <button onClick={() => setActiveTab('submissions')} className={`px-4 py-2 font-bold rounded-lg ${activeTab === 'submissions' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'}`}>My Findings & Actions</button>
-                    <button onClick={() => setActiveTab('extensions')} className={`px-4 py-2 font-bold rounded-lg ${activeTab === 'extensions' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'}`}>Extension Requests</button>
+                    {/* Hiding standalone Extension tab if we want to force merged workflow, but keeping for flexibility if needed. 
+                        Prompt says "Request extension should be along with the CAR submission", so we prioritize the submissions tab. */}
                 </div>
 
                 {activeTab === 'submissions' && (
@@ -111,6 +120,7 @@ const CarManagementPage: React.FC = () => {
                         {auditeeFindings.length === 0 && <p className="text-gray-500">No open findings requiring action.</p>}
                         {auditeeFindings.map(finding => {
                             const findingCars = cars.filter(c => c.findingId === finding.id).sort((a,b) => a.carNumber - b.carNumber);
+                            const nextCarNumber = findingCars.length + 1;
                             
                             return (
                                 <div key={finding.id} className="bg-white p-4 rounded-lg shadow-sm border flex flex-col">
@@ -125,9 +135,21 @@ const CarManagementPage: React.FC = () => {
                                                 }`}>
                                                     {finding.status}
                                                 </span>
+                                                {finding.extensionStatus !== ExtensionStatus.None && (
+                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
+                                                        finding.extensionStatus === ExtensionStatus.Pending ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                                                        finding.extensionStatus === ExtensionStatus.Approved ? 'bg-green-100 text-green-800 border-green-200' :
+                                                        'bg-red-100 text-red-800 border-red-200'
+                                                    }`}>
+                                                        Extension: {finding.extensionStatus}
+                                                    </span>
+                                                )}
                                             </div>
                                             <p className="text-gray-600 mt-1">{finding.description}</p>
-                                            <p className="text-xs text-red-500 mt-1 font-semibold">Deadline: {new Date(finding.deadline!).toLocaleDateString()}</p>
+                                            <p className="text-xs text-red-500 mt-1 font-semibold">
+                                                Deadline: {new Date(finding.deadline!).toLocaleDateString()}
+                                                {finding.extensionStatus === ExtensionStatus.Approved && " (Extended)"}
+                                            </p>
                                             
                                             {/* History of CARs */}
                                             {findingCars.length > 0 && (
@@ -153,9 +175,9 @@ const CarManagementPage: React.FC = () => {
                                         <div className="mt-4 md:mt-0 md:ml-4">
                                             <button 
                                                 onClick={() => setSelectedFinding(finding)} 
-                                                className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg w-full md:w-auto shadow-md"
+                                                className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg w-full md:w-auto shadow-md whitespace-nowrap"
                                             >
-                                                {findingCars.length > 0 ? '+ Add Update / CAR' : 'Submit Initial CAR'}
+                                                {findingCars.length > 0 ? `+ Add Update (CAR ${nextCarNumber})` : 'Submit Initial CAR'}
                                             </button>
                                         </div>
                                     </div>
@@ -165,33 +187,12 @@ const CarManagementPage: React.FC = () => {
                     </div>
                 )}
 
-                {activeTab === 'extensions' && (
-                    <div className="space-y-4">
-                         {auditeeFindings.map(finding => (
-                             <div key={finding.id} className="bg-white p-4 rounded-lg shadow-sm border flex justify-between items-center">
-                                 <div>
-                                    <p className="font-bold">{finding.customId || finding.id}</p>
-                                    <p className="text-sm">Current Deadline: {new Date(finding.deadline!).toLocaleDateString()}</p>
-                                    {finding.extensionStatus !== ExtensionStatus.None && (
-                                        <p className={`text-xs font-bold ${finding.extensionStatus === ExtensionStatus.Approved ? 'text-green-600' : finding.extensionStatus === ExtensionStatus.Rejected ? 'text-red-600' : 'text-yellow-600'}`}>
-                                            Extension Status: {finding.extensionStatus}
-                                        </p>
-                                    )}
-                                 </div>
-                                 {finding.extensionStatus !== ExtensionStatus.Pending && finding.extensionStatus !== ExtensionStatus.Approved && (
-                                    <button onClick={() => setExtensionFinding(finding)} className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg">Request Extension</button>
-                                 )}
-                             </div>
-                         ))}
-                    </div>
-                )}
-
                 {/* Submit CAR Modal */}
                 {selectedFinding && (
-                    <Modal title={`Submit CAR for Finding: ${selectedFinding.id}`} onClose={() => setSelectedFinding(null)}>
+                    <Modal title={`Submit CAR Update for: ${selectedFinding.id}`} onClose={() => setSelectedFinding(null)}>
                         <form onSubmit={handleSubmitCar} className="space-y-4">
                             <div className="bg-blue-50 p-3 rounded-md mb-4 text-sm text-blue-800">
-                                You are submitting an update for this finding. This will create a chronological entry in the finding history.
+                                Please provide the Corrective Action Report details below. You can also request a deadline extension if the issue requires more time to resolve.
                             </div>
 
                             <div><label className="block text-sm font-medium">Root Cause Analysis</label><textarea value={rootCause} onChange={e => setRootCause(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required /></div>
@@ -208,7 +209,7 @@ const CarManagementPage: React.FC = () => {
                             <div><label className="block text-sm font-medium">Proposed Closure Date</label><input type="date" value={proposedClosureDate} onChange={e => setProposedClosureDate(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required /></div>
                             
                             {/* Integrated Extension Request */}
-                            <div className="mt-6 border-t pt-4">
+                            <div className="mt-6 border-t pt-4 bg-yellow-50/50 p-4 rounded-lg border border-yellow-100">
                                 <div className="flex items-center">
                                     <input 
                                         type="checkbox" 
@@ -220,9 +221,9 @@ const CarManagementPage: React.FC = () => {
                                     <label htmlFor="reqExt" className="ml-2 block text-sm font-bold text-gray-700">Request Deadline Extension with this submission?</label>
                                 </div>
                                 {requestExtensionWithCar && (
-                                    <div className="mt-3 pl-6 space-y-3 bg-yellow-50 p-3 rounded">
+                                    <div className="mt-3 pl-6 space-y-3">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Requested New Deadline</label>
+                                            <label className="block text-sm font-medium text-gray-700">Requested New Deadline (Date)</label>
                                             <input type="date" value={extensionDateWithCar} onChange={e => setExtensionDateWithCar(e.target.value)} className="w-full border border-gray-300 rounded-md p-2" required={requestExtensionWithCar} />
                                         </div>
                                         <div>
@@ -237,27 +238,6 @@ const CarManagementPage: React.FC = () => {
                         </form>
                     </Modal>
                 )}
-
-                {/* Request Extension Modal (Standalone) */}
-                {extensionFinding && (
-                    <Modal title={`Request Extension: ${extensionFinding.id}`} onClose={() => setExtensionFinding(null)} size="md">
-                        <form onSubmit={handleSubmitExtension} className="space-y-4">
-                            <p className="text-sm text-gray-600">Current Deadline: {new Date(extensionFinding.deadline!).toLocaleDateString()}</p>
-                            <div>
-                                <label className="block text-sm font-medium">New Requested Date</label>
-                                <input type="date" value={extensionDate} onChange={e => setExtensionDate(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" required />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium">Reason for Delay</label>
-                                <textarea value={extensionReason} onChange={e => setExtensionReason(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-md p-2" rows={3} placeholder="e.g., Logistic delay, waiting for parts..." required />
-                            </div>
-                            <div className="flex justify-end space-x-4">
-                                <button type="button" onClick={() => setExtensionFinding(null)} className="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg">Cancel</button>
-                                <button type="submit" className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg">Request</button>
-                            </div>
-                        </form>
-                    </Modal>
-                )}
             </div>
         );
     }
@@ -265,54 +245,73 @@ const CarManagementPage: React.FC = () => {
     // --- Auditor View ---
     return (
          <div className="container mx-auto">
-            <div className="flex space-x-4 mb-6">
-                <button onClick={() => setActiveTab('submissions')} className={`px-4 py-2 font-bold rounded-lg ${activeTab === 'submissions' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'}`}>
-                    CAR Reviews <span className="ml-2 bg-white text-primary text-xs px-2 py-0.5 rounded-full">{carsToReview.length}</span>
-                </button>
-                <button onClick={() => setActiveTab('extensions')} className={`px-4 py-2 font-bold rounded-lg ${activeTab === 'extensions' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'}`}>
-                    Extension Requests <span className="ml-2 bg-white text-primary text-xs px-2 py-0.5 rounded-full">{extensionsToReview.length}</span>
-                </button>
-            </div>
-
-            {activeTab === 'submissions' && (
-                <div className="space-y-4">
-                    {carsToReview.length === 0 && <p className="text-gray-500">No pending CARs to review.</p>}
-                    {carsToReview.map(car => (
-                        <div key={car.id} className="bg-white p-4 rounded-lg shadow-sm border flex justify-between items-center">
-                            <div>
-                                <p className="font-bold text-lg">CAR {car.carNumber} <span className="text-sm font-normal text-gray-500">(for {car.findingId})</span></p>
-                                <p className="text-gray-600 text-sm">Submitted on {new Date(car.submissionDate).toLocaleDateString()}</p>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">CAR Reviews</h1>
+            
+            <div className="space-y-4">
+                {carsToReview.length === 0 && <div className="p-8 text-center bg-gray-50 rounded-lg text-gray-500">No pending CARs to review.</div>}
+                
+                {carsToReview.map(car => {
+                    const finding = findings.find(f => f.id === car.findingId);
+                    return (
+                    <div key={car.id} className="bg-white p-6 rounded-lg shadow-md border border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded">CAR #{car.carNumber}</span>
+                                {finding?.extensionStatus === ExtensionStatus.Pending && (
+                                    <span className="bg-purple-100 text-purple-800 text-xs font-bold px-2 py-1 rounded border border-purple-200 animate-pulse">Extension Requested</span>
+                                )}
                             </div>
-                            <button onClick={() => setSelectedCar(car)} className="bg-primary text-white font-bold py-2 px-4 rounded-lg">Review CAR</button>
+                            <h3 className="font-bold text-lg text-gray-800">{car.findingId}</h3>
+                            <p className="text-gray-600 text-sm mt-1">Submitted: {new Date(car.submissionDate).toLocaleDateString()}</p>
+                            <div className="mt-2 text-sm">
+                                <span className="font-semibold text-gray-700">Action:</span> {car.correctiveAction.substring(0, 100)}...
+                            </div>
                         </div>
-                    ))}
-                </div>
-            )}
-
-            {activeTab === 'extensions' && (
-                <div className="space-y-4">
-                     {extensionsToReview.length === 0 && <p className="text-gray-500">No pending extension requests.</p>}
-                     {extensionsToReview.map(finding => (
-                         <div key={finding.id} className="bg-white p-4 rounded-lg shadow-sm border space-y-2">
-                             <div className="flex justify-between">
-                                 <h3 className="font-bold">{finding.customId || finding.id}</h3>
-                                 <span className="text-sm bg-yellow-100 text-yellow-800 px-2 rounded">Extension Requested</span>
-                             </div>
-                             <p className="text-sm">Current Deadline: <span className="font-medium">{new Date(finding.deadline!).toLocaleDateString()}</span></p>
-                             <p className="text-sm">Requested Deadline: <span className="font-bold text-primary">{new Date(finding.requestedDeadline!).toLocaleDateString()}</span></p>
-                             <p className="text-sm bg-gray-50 p-2 rounded border">Reason: {finding.extensionReason}</p>
-                             <div className="flex justify-end space-x-2">
-                                 <button onClick={() => processExtension(finding.id, 'Rejected')} className="bg-red-500 text-white px-3 py-1 rounded">Reject</button>
-                                 <button onClick={() => processExtension(finding.id, 'Approved')} className="bg-green-500 text-white px-3 py-1 rounded">Approve</button>
-                             </div>
-                         </div>
-                     ))}
-                </div>
-            )}
+                        <button onClick={() => setSelectedCar(car)} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-6 rounded-lg shadow transition-transform transform hover:scale-105">
+                            Review CAR
+                        </button>
+                    </div>
+                )})}
+            </div>
 
              {selectedCar && (
                 <Modal title={`Review CAR ${selectedCar.carNumber} for ${selectedCar.findingId}`} onClose={() => setSelectedCar(null)}>
                      <form onSubmit={handleReviewCar} className="space-y-6">
+                        
+                        {/* Extension Request Section inside Review Modal */}
+                        {findings.find(f => f.id === selectedCar.findingId)?.extensionStatus === ExtensionStatus.Pending && (
+                            <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded shadow-sm">
+                                <h4 className="font-bold text-purple-800 mb-2 flex items-center gap-2">
+                                    <span className="text-xl">⏳</span> Extension Requested
+                                </h4>
+                                <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                                    <div>
+                                        <span className="text-gray-600 block">Requested Deadline:</span>
+                                        <span className="font-bold text-gray-900">
+                                            {new Date(findings.find(f => f.id === selectedCar.findingId)?.requestedDeadline || '').toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600 block">Reason:</span>
+                                        <span className="italic text-gray-900">
+                                            "{findings.find(f => f.id === selectedCar.findingId)?.extensionReason}"
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex gap-4 items-center bg-white p-2 rounded border border-purple-100">
+                                    <span className="font-semibold text-gray-700 text-sm">Decision:</span>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="extDecision" onChange={() => setApproveExtension(true)} className="text-green-600 focus:ring-green-500" />
+                                        <span className="text-sm text-green-700 font-medium">Approve</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="extDecision" onChange={() => setApproveExtension(false)} className="text-red-600 focus:ring-red-500" />
+                                        <span className="text-sm text-red-700 font-medium">Reject</span>
+                                    </label>
+                                </div>
+                            </div>
+                        )}
+
                         {/* History Context */}
                         {cars.filter(c => c.findingId === selectedCar.findingId && c.id !== selectedCar.id).length > 0 && (
                             <div className="bg-gray-100 p-3 rounded-md mb-4 max-h-40 overflow-y-auto">
@@ -328,12 +327,12 @@ const CarManagementPage: React.FC = () => {
 
                         {/* Evidence Display */}
                         {selectedCar.attachments && selectedCar.attachments.length > 0 && (
-                            <div className="bg-blue-50 p-4 rounded-md">
+                            <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
                                 <h4 className="font-semibold text-blue-900 text-sm mb-2">Attached Evidence</h4>
                                 <div className="flex gap-2">
                                     {selectedCar.attachments.map((att, i) => (
-                                        <div key={i} className="bg-white border p-2 rounded text-xs flex items-center">
-                                            <span className="truncate max-w-[150px]">{att.name}</span>
+                                        <div key={i} className="bg-white border p-2 rounded text-xs flex items-center text-blue-700">
+                                            <span className="truncate max-w-[150px]">📎 {att.name}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -342,26 +341,26 @@ const CarManagementPage: React.FC = () => {
 
                         {/* Root Cause Section */}
                         <div className="space-y-2">
-                             <h4 className="font-semibold text-gray-700">1. Root Cause Analysis</h4>
+                             <h4 className="font-semibold text-gray-700">1. Root Cause Analysis (Submitted by Auditee)</h4>
                              <div className="p-3 bg-gray-50 border border-gray-200 rounded text-gray-800 text-sm whitespace-pre-wrap">{selectedCar.rootCause}</div>
                              <textarea 
                                 placeholder="Auditor remarks on Root Cause..." 
                                 value={rootCauseRemarks} 
                                 onChange={e => setRootCauseRemarks(e.target.value)}
-                                className="w-full border-gray-300 rounded-md text-sm p-2"
+                                className="w-full border border-gray-300 rounded-md text-sm p-2 focus:ring-primary focus:border-primary"
                                 rows={2}
                              />
                         </div>
 
                         {/* Corrective Action Section */}
                          <div className="space-y-2">
-                             <h4 className="font-semibold text-gray-700">2. Corrective Action Plan</h4>
+                             <h4 className="font-semibold text-gray-700">2. Corrective Action Plan (Submitted by Auditee)</h4>
                              <div className="p-3 bg-gray-50 border border-gray-200 rounded text-gray-800 text-sm whitespace-pre-wrap">{selectedCar.correctiveAction}</div>
                              <textarea 
                                 placeholder="Auditor remarks on Corrective Action..." 
                                 value={correctiveActionRemarks} 
                                 onChange={e => setCorrectiveActionRemarks(e.target.value)}
-                                className="w-full border-gray-300 rounded-md text-sm p-2"
+                                className="w-full border border-gray-300 rounded-md text-sm p-2 focus:ring-primary focus:border-primary"
                                 rows={2}
                              />
                         </div>
@@ -373,27 +372,29 @@ const CarManagementPage: React.FC = () => {
 
                         {/* Decision */}
                         <div className="border-t pt-6 bg-gray-50 -mx-6 px-6 pb-2 rounded-b-lg">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Overall Remarks</label>
-                            <textarea value={remarks} onChange={e => setRemarks(e.target.value)} className="w-full border border-gray-300 rounded-md p-2 mb-4" rows={3} required />
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Overall Auditor Remarks</label>
+                            <textarea value={remarks} onChange={e => setRemarks(e.target.value)} className="w-full border border-gray-300 rounded-md p-2 mb-4 focus:ring-primary focus:border-primary" rows={3} required />
 
-                            <div className="flex items-center gap-4 bg-white p-3 rounded border mb-4">
-                                <label className="flex items-center space-x-2 cursor-pointer">
+                            <div className="flex items-center gap-4 bg-white p-4 rounded border border-gray-200 mb-4 shadow-sm">
+                                <label className="flex items-center space-x-3 cursor-pointer">
                                     <input 
                                         type="checkbox" 
                                         checked={closeFinding} 
                                         onChange={e => setCloseFinding(e.target.checked)}
-                                        className="h-5 w-5 text-success focus:ring-success rounded"
+                                        className="h-6 w-6 text-success focus:ring-success rounded border-gray-300"
                                     />
-                                    <span className="font-bold text-gray-800">Close this Finding?</span>
+                                    <div>
+                                        <span className="font-bold text-gray-800 block">Close this Finding?</span>
+                                        <span className="text-xs text-gray-500">
+                                            Check this ONLY if the issue is fully resolved. Unchecked means the finding remains OPEN for another CAR cycle.
+                                        </span>
+                                    </div>
                                 </label>
-                                <span className="text-xs text-gray-500">
-                                    (Check this if the CAR fully resolves the issue. Leave unchecked if further action/CARs are required.)
-                                </span>
                             </div>
 
                             <div className="flex justify-end space-x-4">
-                                <button type="button" onClick={() => setSelectedCar(null)} className="bg-white border border-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg">Cancel</button>
-                                <button type="submit" className="bg-primary text-white font-bold py-2 px-4 rounded-lg">Submit Review</button>
+                                <button type="button" onClick={() => setSelectedCar(null)} className="bg-white border border-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-50">Cancel</button>
+                                <button type="submit" className="bg-primary text-white font-bold py-2 px-6 rounded-lg hover:bg-primary-dark shadow-lg">Submit Review</button>
                             </div>
                         </div>
                     </form>

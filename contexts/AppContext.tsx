@@ -21,7 +21,7 @@ interface AppContextType {
   addAudit: (auditData: Omit<Audit, 'id' | 'auditorId'>, findingsData: Omit<Finding, 'id' | 'auditId' | 'deadline' | 'status'>[]) => void;
   updateAudit: (auditId: string, auditData: Partial<Audit>, findingsData: Finding[]) => void;
   submitCar: (carData: Omit<CAR, 'id' | 'submittedById' | 'submissionDate' | 'status' | 'auditId' | 'carNumber'>, extensionRequest?: { date: string, reason: string }) => void;
-  reviewCar: (carId: string, remarks: string, rootCauseRemarks: string | undefined, correctiveActionRemarks: string | undefined, closeFinding: boolean) => void;
+  reviewCar: (carId: string, remarks: string, rootCauseRemarks: string | undefined, correctiveActionRemarks: string | undefined, closeFinding: boolean, extensionDecision?: 'Approved' | 'Rejected') => void;
   requestExtension: (findingId: string, requestedDate: string, reason: string) => void;
   processExtension: (findingId: string, decision: 'Approved' | 'Rejected') => void;
   addUser: (userData: Omit<User, 'id' | 'avatarUrl'>) => void;
@@ -260,7 +260,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const findingToUpdate = findings.find(f => f.id === carData.findingId);
       if(!findingToUpdate) return;
 
-      // Calculate next CAR number for this finding
+      // Calculate next CAR number for this finding based on existing CARs
       const existingCars = cars.filter(c => c.findingId === carData.findingId);
       const nextCarNumber = existingCars.length + 1;
       
@@ -282,8 +282,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (f.id === carData.findingId) {
               return {
                   ...f, 
-                  status: FindingStatus.CARSubmitted, // Or 'UnderReview'
-                  // If extension requested
+                  status: FindingStatus.CARSubmitted, // This status triggers visibility for Auditor
+                  // If extension requested, update the fields
                   ...(extensionRequest ? {
                       extensionStatus: ExtensionStatus.Pending,
                       requestedDeadline: extensionRequest.date,
@@ -295,7 +295,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }));
   };
 
-  const reviewCar = (carId: string, remarks: string, rootCauseRemarks: string | undefined, correctiveActionRemarks: string | undefined, closeFinding: boolean) => {
+  const reviewCar = (
+      carId: string, 
+      remarks: string, 
+      rootCauseRemarks: string | undefined, 
+      correctiveActionRemarks: string | undefined, 
+      closeFinding: boolean,
+      extensionDecision?: 'Approved' | 'Rejected'
+    ) => {
       if(!currentUser || currentUser.role !== UserRole.Auditor) return;
       
       const carToUpdate = cars.find(c => c.id === carId);
@@ -312,16 +319,38 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           reviewDate: new Date().toISOString().split('T')[0]
       } : c));
       
-      // 2. Decide fate of the Finding
-      const newFindingStatus = closeFinding ? FindingStatus.Closed : FindingStatus.Open;
+      // 2. Decide fate of the Finding & Extension
+      setFindings(prev => prev.map(f => {
+          if (f.id === carToUpdate.findingId) {
+             let updatedFinding = { ...f };
+             
+             // If Close Finding is selected, close it. 
+             // If NOT selected, revert status to Open (or Rejected if remarks imply) so Auditee can submit CAR 2, 3 etc.
+             updatedFinding.status = closeFinding ? FindingStatus.Closed : FindingStatus.Open;
 
-      setFindings(prev => prev.map(f => f.id === carToUpdate.findingId ? {...f, status: newFindingStatus} : f));
+             // Handle Extension Decision if provided
+             if (extensionDecision) {
+                 if (extensionDecision === 'Approved') {
+                     updatedFinding.extensionStatus = ExtensionStatus.Approved;
+                     updatedFinding.deadline = f.requestedDeadline; // Apply the new deadline
+                 } else {
+                     updatedFinding.extensionStatus = ExtensionStatus.Rejected;
+                 }
+             }
 
-      // 3. Check if Audit is complete
+             return updatedFinding;
+          }
+          return f;
+      }));
+
+      // 3. Check if Audit is complete (only if closing finding)
       const auditToUpdate = audits.find(a => a.id === carToUpdate.auditId);
       if (auditToUpdate && closeFinding) {
-        const relatedFindings = findings.filter(f => f.auditId === auditToUpdate.id);
-        const allClosed = relatedFindings.every(f => f.id === carToUpdate.findingId ? true : f.status === FindingStatus.Closed);
+        // Need to check current state of findings + the change we just made
+        const relatedFindings = findings.map(f => f.id === carToUpdate.findingId ? { ...f, status: FindingStatus.Closed } : f)
+                                        .filter(f => f.auditId === auditToUpdate.id);
+        
+        const allClosed = relatedFindings.every(f => f.status === FindingStatus.Closed);
         if(allClosed) {
             setAudits(prev => prev.map(a => a.id === auditToUpdate.id ? {...a, status: AuditStatus.Completed} : a));
         }
