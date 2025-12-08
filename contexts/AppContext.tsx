@@ -20,8 +20,8 @@ interface AppContextType {
   toggleNotificationDrawer: () => void;
   addAudit: (auditData: Omit<Audit, 'id' | 'auditorId'>, findingsData: Omit<Finding, 'id' | 'auditId' | 'deadline' | 'status'>[]) => void;
   updateAudit: (auditId: string, auditData: Partial<Audit>, findingsData: Finding[]) => void;
-  submitCar: (carData: Omit<CAR, 'id' | 'submittedById' | 'submissionDate' | 'status' | 'auditId'>) => void;
-  reviewCar: (carId: string, decision: 'Approved' | 'Rejected', remarks: string, rootCauseRemarks?: string, correctiveActionRemarks?: string) => void;
+  submitCar: (carData: Omit<CAR, 'id' | 'submittedById' | 'submissionDate' | 'status' | 'auditId' | 'carNumber'>, extensionRequest?: { date: string, reason: string }) => void;
+  reviewCar: (carId: string, remarks: string, rootCauseRemarks: string | undefined, correctiveActionRemarks: string | undefined, closeFinding: boolean) => void;
   requestExtension: (findingId: string, requestedDate: string, reason: string) => void;
   processExtension: (findingId: string, decision: 'Approved' | 'Rejected') => void;
   addUser: (userData: Omit<User, 'id' | 'avatarUrl'>) => void;
@@ -86,7 +86,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 generatedNotifications.push({
                     id: generatedNotifications.length + 1,
                     type: 'CAR_SUBMITTED',
-                    message: `New CAR submitted for ${car.findingId}.`,
+                    message: `CAR ${car.carNumber} submitted for ${car.findingId}.`,
                     time: 'Just now'
                 });
             }
@@ -136,7 +136,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     generatedNotifications.push({
                         id: generatedNotifications.length + 1,
                         type: 'CAR_DUE',
-                        message: `Action for finding ${finding.customId || finding.id} is overdue by ${Math.abs(daysUntil)} day(s). Please submit CAR immediately.`,
+                        message: `Action for finding ${finding.customId || finding.id} is overdue by ${Math.abs(daysUntil)} day(s). Please submit update immediately.`,
                         time: 'Just now'
                     });
                 } else if (daysUntil >= 0 && daysUntil <= 3) {
@@ -147,22 +147,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                         time: 'Just now'
                     });
                 }
-            }
-        });
-
-        // Rejected CARs
-        cars.forEach(car => {
-            if (car.status === 'Rejected' && car.submittedById === currentUser.id) {
-                    // Check if finding is still in Rejected state
-                    const finding = findings.find(f => f.id === car.findingId);
-                    if (finding && finding.status === FindingStatus.Rejected) {
-                    generatedNotifications.push({
-                        id: generatedNotifications.length + 1,
-                        type: 'CAR_REJECTED',
-                        message: `CAR for finding ${finding.customId || finding.id} was rejected. Please review auditor remarks and resubmit.`,
-                        time: 'Action Required'
-                    });
-                    }
             }
         });
     }
@@ -270,38 +254,57 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       });
   };
 
-  const submitCar = (carData: Omit<CAR, 'id' | 'submittedById' | 'submissionDate' | 'status' | 'auditId'>) => {
+  const submitCar = (carData: Omit<CAR, 'id' | 'submittedById' | 'submissionDate' | 'status' | 'auditId' | 'carNumber'>, extensionRequest?: { date: string, reason: string }) => {
       if(!currentUser) return;
       
       const findingToUpdate = findings.find(f => f.id === carData.findingId);
       if(!findingToUpdate) return;
+
+      // Calculate next CAR number for this finding
+      const existingCars = cars.filter(c => c.findingId === carData.findingId);
+      const nextCarNumber = existingCars.length + 1;
       
       const newCarId = `CAR-I-${String(cars.length + 1).padStart(3, '0')}`;
       const newCar: CAR = {
           ...carData,
           id: newCarId,
           auditId: findingToUpdate.auditId,
+          carNumber: nextCarNumber,
           submittedById: currentUser.id,
           submissionDate: new Date().toISOString().split('T')[0],
           status: 'Pending Review',
       };
 
       setCars(prev => [...prev, newCar]);
-      setFindings(prev => prev.map(f => f.id === carData.findingId ? {...f, status: FindingStatus.CARSubmitted, carId: newCarId} : f));
+
+      // Update finding status to indicate activity, and handle extension if present
+      setFindings(prev => prev.map(f => {
+          if (f.id === carData.findingId) {
+              return {
+                  ...f, 
+                  status: FindingStatus.CARSubmitted, // Or 'UnderReview'
+                  // If extension requested
+                  ...(extensionRequest ? {
+                      extensionStatus: ExtensionStatus.Pending,
+                      requestedDeadline: extensionRequest.date,
+                      extensionReason: extensionRequest.reason
+                  } : {})
+              };
+          }
+          return f;
+      }));
   };
 
-  const reviewCar = (carId: string, decision: 'Approved' | 'Rejected', remarks: string, rootCauseRemarks?: string, correctiveActionRemarks?: string) => {
+  const reviewCar = (carId: string, remarks: string, rootCauseRemarks: string | undefined, correctiveActionRemarks: string | undefined, closeFinding: boolean) => {
       if(!currentUser || currentUser.role !== UserRole.Auditor) return;
       
       const carToUpdate = cars.find(c => c.id === carId);
       if(!carToUpdate) return;
 
-      const newCarStatus = decision;
-      const newFindingStatus = decision === 'Approved' ? FindingStatus.Closed : FindingStatus.Rejected;
-
+      // 1. Mark the CAR itself as Reviewed
       setCars(prev => prev.map(c => c.id === carId ? {
           ...c, 
-          status: newCarStatus, 
+          status: 'Reviewed', 
           auditorRemarks: remarks, 
           rootCauseRemarks: rootCauseRemarks,
           correctiveActionRemarks: correctiveActionRemarks,
@@ -309,12 +312,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           reviewDate: new Date().toISOString().split('T')[0]
       } : c));
       
+      // 2. Decide fate of the Finding
+      const newFindingStatus = closeFinding ? FindingStatus.Closed : FindingStatus.Open;
+
       setFindings(prev => prev.map(f => f.id === carToUpdate.findingId ? {...f, status: newFindingStatus} : f));
 
+      // 3. Check if Audit is complete
       const auditToUpdate = audits.find(a => a.id === carToUpdate.auditId);
-      if (auditToUpdate) {
+      if (auditToUpdate && closeFinding) {
         const relatedFindings = findings.filter(f => f.auditId === auditToUpdate.id);
-        const allClosed = relatedFindings.every(f => f.id === carToUpdate.findingId ? newFindingStatus === FindingStatus.Closed : f.status === FindingStatus.Closed);
+        const allClosed = relatedFindings.every(f => f.id === carToUpdate.findingId ? true : f.status === FindingStatus.Closed);
         if(allClosed) {
             setAudits(prev => prev.map(a => a.id === auditToUpdate.id ? {...a, status: AuditStatus.Completed} : a));
         }

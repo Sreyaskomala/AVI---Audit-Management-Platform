@@ -85,7 +85,6 @@ export const mockFindings: Finding[] = [
         description: 'The examination environment did not meet the required standards.',
         deadline: '2025-10-22',
         status: FindingStatus.CARSubmitted,
-        carId: 'CAR-I-001'
     },
     {
         id: 'SEP25-005',
@@ -128,6 +127,7 @@ export const mockCars: CAR[] = [
         id: 'CAR-I-001',
         findingId: 'OCT25-002',
         auditId: 'AR/2025/021',
+        carNumber: 1,
         submittedById: 2,
         submissionDate: '2025-10-20',
         rootCause: 'The designated examination room was temporarily unavailable due to maintenance.',

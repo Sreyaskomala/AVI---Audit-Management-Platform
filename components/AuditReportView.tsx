@@ -17,6 +17,7 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
 
     const audit = audits.find(a => a.id === auditId);
     const relevantFindings = findings.filter(f => f.auditId === auditId);
+    // Fetch all cars related to this audit
     const relevantCars = cars.filter(c => c.auditId === auditId);
     const auditor = users.find(u => u.id === audit?.auditorId);
     const auditee = users.find(u => u.id === audit?.auditeeId);
@@ -159,7 +160,11 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
                     <h2 className="text-xl font-bold text-gray-800 mb-4 border-b-2 border-primary pb-1">Findings Details</h2>
                     <div className="space-y-8">
                         {relevantFindings.map((finding: Finding, index) => {
-                            const car = relevantCars.find(c => c.findingId === finding.id);
+                            // Get ALL cars for this finding and sort them
+                            const carsForFinding = relevantCars
+                                .filter(c => c.findingId === finding.id)
+                                .sort((a,b) => a.carNumber - b.carNumber);
+
                             return (
                                 <div key={finding.id} className="break-inside-avoid">
                                     <div className="flex items-center gap-2 mb-2">
@@ -212,33 +217,49 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
                                         )}
                                     </div>
 
-                                    {car && (
+                                    {/* Render History of CARs */}
+                                    {carsForFinding.length > 0 && (
                                         <div className="mt-4 ml-6 pl-4 border-l-2 border-dashed border-gray-300">
-                                            <h4 className="font-bold text-gray-700 text-sm uppercase mb-2">Corrective Action Report</h4>
-                                            <div className="bg-green-50 p-4 rounded border text-sm text-gray-700 space-y-3">
-                                                <div>
-                                                    <strong className="text-green-800 block">Root Cause Analysis:</strong>
-                                                    <p>{car.rootCause}</p>
-                                                    {car.rootCauseRemarks && <p className="text-xs text-red-600 mt-1 italic"> Auditor: {car.rootCauseRemarks}</p>}
-                                                </div>
-                                                <div>
-                                                    <strong className="text-green-800 block">Corrective Action:</strong>
-                                                    <p>{car.correctiveAction}</p>
-                                                    {car.correctiveActionRemarks && <p className="text-xs text-red-600 mt-1 italic"> Auditor: {car.correctiveActionRemarks}</p>}
-                                                </div>
-                                                <div>
-                                                    <strong className="text-green-800 block">Evidence:</strong>
-                                                    <p>{car.evidence}</p>
-                                                    {car.attachments && car.attachments.length > 0 && (
-                                                        <div className="text-xs text-blue-600 mt-1 flex gap-2">
-                                                            {car.attachments.map(a => <span key={a.name}>📎 {a.name}</span>)}
+                                            <h4 className="font-bold text-gray-700 text-sm uppercase mb-2">Corrective Action History</h4>
+                                            
+                                            <div className="space-y-4">
+                                                {carsForFinding.map(car => (
+                                                    <div key={car.id} className="bg-white p-4 rounded border border-gray-200 text-sm text-gray-700 shadow-sm">
+                                                        <div className="flex justify-between border-b pb-2 mb-2">
+                                                            <strong className="text-indigo-800">CAR {car.carNumber} ({new Date(car.submissionDate).toLocaleDateString()})</strong>
+                                                            <span className="text-xs text-gray-500">Reviewed Date: {car.reviewDate ? new Date(car.reviewDate).toLocaleDateString() : 'Pending'}</span>
                                                         </div>
-                                                    )}
-                                                </div>
-                                                <div className="pt-2 border-t border-green-200 flex justify-between items-center">
-                                                     <span><strong>Status:</strong> <span className="font-bold">{car.status}</span></span>
-                                                     {car.auditorRemarks && <span className="italic text-gray-500">"{car.auditorRemarks}"</span>}
-                                                </div>
+
+                                                        <div className="space-y-2">
+                                                            <div>
+                                                                <strong className="text-gray-800 block text-xs uppercase">Root Cause Analysis:</strong>
+                                                                <p className="bg-gray-50 p-2 rounded">{car.rootCause}</p>
+                                                                {car.rootCauseRemarks && <p className="text-xs text-red-600 mt-1 italic pl-2 border-l-2 border-red-300"> Auditor: {car.rootCauseRemarks}</p>}
+                                                            </div>
+                                                            <div>
+                                                                <strong className="text-gray-800 block text-xs uppercase">Corrective Action:</strong>
+                                                                <p className="bg-gray-50 p-2 rounded">{car.correctiveAction}</p>
+                                                                {car.correctiveActionRemarks && <p className="text-xs text-red-600 mt-1 italic pl-2 border-l-2 border-red-300"> Auditor: {car.correctiveActionRemarks}</p>}
+                                                            </div>
+                                                            <div>
+                                                                <strong className="text-gray-800 block text-xs uppercase">Evidence:</strong>
+                                                                <p className="bg-gray-50 p-2 rounded">{car.evidence}</p>
+                                                                {car.attachments && car.attachments.length > 0 && (
+                                                                    <div className="text-xs text-blue-600 mt-1 flex gap-2">
+                                                                        {car.attachments.map(a => <span key={a.name}>📎 {a.name}</span>)}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            
+                                                            {car.auditorRemarks && (
+                                                                <div className="pt-2 mt-2 border-t border-gray-200">
+                                                                    <span className="font-bold text-gray-800 text-xs uppercase block">Auditor Remarks:</span>
+                                                                    <p className="italic text-gray-600">"{car.auditorRemarks}"</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
                                     )}

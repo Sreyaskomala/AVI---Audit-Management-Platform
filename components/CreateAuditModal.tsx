@@ -4,6 +4,8 @@ import { useAppContext } from '../contexts/AppContext';
 import { AuditStatus, Finding, FindingLevel, UserRole, AuditType, Location, Attachment, Audit } from '../types';
 import Modal from './shared/Modal';
 import { FSTD_OPTIONS } from '../constants';
+import { FileTextIcon } from './icons/FileTextIcon';
+import { CheckCircleIcon } from './icons/CheckCircleIcon';
 
 interface CreateAuditModalProps {
     isOpen: boolean;
@@ -316,19 +318,21 @@ const CreateAuditModal: React.FC<CreateAuditModalProps> = ({ isOpen, onClose, in
                 
                 <div className="flex justify-between items-center pt-6 border-t">
                      <button type="button" onClick={onClose} className="text-gray-600 font-semibold hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-100">Cancel</button>
-                     <div className="flex space-x-3">
+                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                         <button 
                             type="button" 
                             onClick={(e) => handleSave(e, AuditStatus.Draft)} 
-                            className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-6 rounded-lg border border-gray-300 shadow-sm transition-colors"
+                            className="bg-white hover:bg-gray-50 text-gray-700 font-bold py-2 px-6 rounded-lg border-2 border-gray-300 shadow-sm transition-colors flex items-center gap-2 justify-center"
                         >
+                            <FileTextIcon className="h-5 w-5" />
                             Save as Draft
                         </button>
                         <button 
                             type="button" 
                             onClick={(e) => handleSave(e, AuditStatus.CARPending)} 
-                            className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
+                            className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 flex items-center gap-2 justify-center"
                         >
+                            <CheckCircleIcon className="h-5 w-5" />
                             Finalize & Submit Report
                         </button>
                     </div>

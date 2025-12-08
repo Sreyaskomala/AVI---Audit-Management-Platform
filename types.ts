@@ -73,12 +73,31 @@ export interface Finding {
   attachments?: Attachment[];
   deadline?: string;
   status: FindingStatus;
-  carId?: string;
   
   // Extension Logic
   extensionStatus?: ExtensionStatus;
   extensionReason?: string;
   requestedDeadline?: string;
+}
+
+export interface CAR {
+  id: string; // CAR-I-001
+  findingId: string;
+  auditId: string;
+  carNumber: number; // 1, 2, 3...
+  submittedById: number;
+  submissionDate: string;
+  rootCause: string;
+  correctiveAction: string;
+  evidence: string;
+  attachments?: Attachment[]; // Evidence files
+  proposedClosureDate: string;
+  status: 'Pending Review' | 'Reviewed'; // Changed from Approved/Rejected to simply Reviewed, outcome determines finding status
+  auditorRemarks?: string;
+  rootCauseRemarks?: string;
+  correctiveActionRemarks?: string;
+  reviewDate?: string;
+  reviewedById?: number;
 }
 
 export interface Audit {
@@ -95,25 +114,6 @@ export interface Audit {
   externalEntity?: string;
   location?: Location;
   fstdId?: string; // Optional FSTD reference (e.g., FSTD-1)
-}
-
-export interface CAR {
-  id: string; // CAR-I-001
-  findingId: string;
-  auditId: string;
-  submittedById: number;
-  submissionDate: string;
-  rootCause: string;
-  correctiveAction: string;
-  evidence: string;
-  attachments?: Attachment[]; // Evidence files
-  proposedClosureDate: string;
-  status: 'Pending Review' | 'Approved' | 'Rejected';
-  auditorRemarks?: string;
-  rootCauseRemarks?: string;
-  correctiveActionRemarks?: string;
-  reviewDate?: string;
-  reviewedById?: number;
 }
 
 export interface Notification {
