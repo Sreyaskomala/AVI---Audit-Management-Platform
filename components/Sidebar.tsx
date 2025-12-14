@@ -8,6 +8,7 @@ import { FolderIcon } from './icons/FolderIcon';
 import { UsersIcon } from './icons/UsersIcon';
 import { SettingsIcon } from './icons/SettingsIcon';
 import { XIcon } from './icons/XIcon';
+import { HelpCircleIcon } from './icons/HelpCircleIcon';
 import { useAppContext } from '../contexts/AppContext';
 import { UserRole } from '../types';
 import { Logo } from './Logo';
@@ -78,6 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
                    {currentUser?.role === UserRole.Auditor && (
                         <NavLink icon={<UsersIcon className="h-5 w-5" />} text="User Management" pageKey="user-management" />
                    )}
+                   <NavLink icon={<HelpCircleIcon className="h-5 w-5" />} text="Help & Guide" pageKey="help" />
                    <NavLink icon={<SettingsIcon className="h-5 w-5" />} text="Settings" pageKey="settings" />
                 </div>
             </aside>

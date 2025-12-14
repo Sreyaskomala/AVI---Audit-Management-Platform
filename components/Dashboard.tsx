@@ -7,12 +7,15 @@ import { FileTextIcon } from './icons/FileTextIcon';
 import { AlertTriangleIcon } from './icons/AlertTriangleIcon';
 import { ClipboardListIcon } from './icons/ClipboardListIcon';
 import { CheckCircleIcon } from './icons/CheckCircleIcon';
+import { HelpCircleIcon } from './icons/HelpCircleIcon';
 import { useAppContext } from '../contexts/AppContext';
 import { AuditStatus, FindingStatus, UserRole, Location } from '../types';
+import CreateAuditModal from './CreateAuditModal';
 
 const Dashboard: React.FC = () => {
   const { audits, findings, cars, setCurrentPage, currentUser } = useAppContext();
   const [selectedLocation, setSelectedLocation] = useState<string>('All');
+  const [isCreateModalOpen, setCreateModalOpen] = useState(false);
 
   // Filter data based on selected Location
   const filteredAudits = selectedLocation === 'All' 
@@ -34,18 +37,35 @@ const Dashboard: React.FC = () => {
     <div className="container mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Dashboard</h1>
-          <div className="mt-4 md:mt-0">
-              <label className="mr-2 text-gray-600 dark:text-gray-300 font-medium">Filter Location:</label>
-              <select 
-                value={selectedLocation} 
-                onChange={(e) => setSelectedLocation(e.target.value)} 
-                className="border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary"
+          <div className="mt-4 md:mt-0 flex items-center gap-4">
+              {canCreateAudit && (
+                  <button 
+                      onClick={() => setCreateModalOpen(true)}
+                      className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center gap-2 transition-transform transform hover:scale-105"
+                  >
+                      <span>+</span> Schedule New Audit
+                  </button>
+              )}
+              <button 
+                onClick={() => setCurrentPage('help')}
+                className="text-primary hover:text-primary-dark font-medium text-sm flex items-center gap-1"
+                title="View User Guide"
               >
-                  <option value="All">All Locations</option>
-                  {Object.values(Location).map(loc => (
-                      <option key={loc} value={loc}>{loc}</option>
-                  ))}
-              </select>
+                  <HelpCircleIcon className="h-4 w-4" /> Need Help?
+              </button>
+              <div>
+                <label className="mr-2 text-gray-600 dark:text-gray-300 font-medium hidden sm:inline">Filter Location:</label>
+                <select 
+                    value={selectedLocation} 
+                    onChange={(e) => setSelectedLocation(e.target.value)} 
+                    className="border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary"
+                >
+                    <option value="All">All Locations</option>
+                    {Object.values(Location).map(loc => (
+                        <option key={loc} value={loc}>{loc}</option>
+                    ))}
+                </select>
+              </div>
           </div>
       </div>
       
@@ -65,7 +85,7 @@ const Dashboard: React.FC = () => {
             <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4">Quick Actions</h2>
             <div className="flex flex-wrap gap-4">
                 {canCreateAudit && (
-                    <button onClick={() => setCurrentPage('audit-reports')} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                    <button onClick={() => setCreateModalOpen(true)} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
                         Create New Audit
                     </button>
                 )}
@@ -92,6 +112,13 @@ const Dashboard: React.FC = () => {
           <NotificationsPanel />
         </div>
       </div>
+
+      {isCreateModalOpen && (
+        <CreateAuditModal 
+            isOpen={isCreateModalOpen} 
+            onClose={() => setCreateModalOpen(false)} 
+        />
+      )}
     </div>
   );
 };
