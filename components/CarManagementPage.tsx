@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { UserRole, Finding, CAR, FindingStatus, Attachment, ExtensionStatus } from '../types';
@@ -239,7 +238,7 @@ const CarManagementPage: React.FC = () => {
                                         <div className="flex items-center gap-4 text-sm mb-4">
                                             <div className="text-red-500 font-semibold flex items-center gap-1">
                                                 <span className="uppercase text-xs text-gray-500 mr-1">Deadline:</span> 
-                                                {new Date(finding.deadline!).toLocaleDateString()}
+                                                <span className="text-xs text-gray-500">{new Date(finding.deadline!).toLocaleDateString()}</span>
                                                 {finding.extensionStatus === ExtensionStatus.Approved && " (Extended)"}
                                             </div>
                                             {finding.extensionStatus === ExtensionStatus.Pending && (
@@ -327,7 +326,7 @@ const CarManagementPage: React.FC = () => {
                                                     <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded border border-slate-200 shadow">
                                                         <div className="flex items-center justify-between space-x-2 mb-1">
                                                             <div className="font-bold text-slate-900">CAR {car.carNumber}</div>
-                                                            <time className="font-caveat font-medium text-indigo-500 text-xs">{new Date(car.submissionDate).toLocaleDateString()}</time>
+                                                            <span className="font-medium text-indigo-500 text-xs">{new Date(car.submissionDate).toLocaleDateString()}</span>
                                                         </div>
                                                         <div className="text-slate-500 text-sm mb-2">{car.correctiveAction}</div>
                                                         {car.attachments && car.attachments.length > 0 && (
@@ -440,6 +439,13 @@ const CarManagementPage: React.FC = () => {
 
                             <div className="flex justify-end space-x-4 pt-4"><button type="button" onClick={() => setSelectedFinding(null)} className="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg">Cancel</button><button type="submit" className="bg-primary text-white font-bold py-2 px-4 rounded-lg">Submit Update</button></div>
                         </form>
+                    </Modal>
+                )}
+
+                {/* View Full Report Modal */}
+                {reportViewId && (
+                    <Modal size="4xl" title={`Audit Report: ${reportViewId}`} onClose={() => setReportViewId(null)}>
+                        <AuditReportView auditId={reportViewId} />
                     </Modal>
                 )}
             </div>
