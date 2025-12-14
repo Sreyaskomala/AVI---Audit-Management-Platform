@@ -6,6 +6,7 @@ interface MetricCardProps {
   value: string | number;
   icon: React.ReactNode;
   color: 'primary' | 'warning' | 'danger' | 'success';
+  onClick?: () => void;
 }
 
 const colorClasses = {
@@ -15,9 +16,12 @@ const colorClasses = {
     success: 'border-success',
 };
 
-const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon, color }) => {
+const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon, color, onClick }) => {
   return (
-    <div className={`bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border-l-8 ${colorClasses[color]} flex items-center justify-between transition-transform transform hover:-translate-y-1 hover:shadow-2xl`}>
+    <div 
+        onClick={onClick}
+        className={`bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border-l-8 ${colorClasses[color]} flex items-center justify-between transition-transform transform hover:-translate-y-1 hover:shadow-2xl ${onClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50' : ''}`}
+    >
       <div>
         <p className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase">{title}</p>
         <p className="text-4xl font-bold text-gray-800 dark:text-white">{value}</p>
