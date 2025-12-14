@@ -313,7 +313,7 @@ const AuditReportsPage: React.FC = () => {
             </div>
 
             {selectedAuditId && (
-                <Modal size="4xl" title={`Audit Report: ${selectedAuditId}`} onClose={() => setSelectedAuditId(null)}>
+                <Modal size="custom-xl" title={`Audit Report: ${selectedAuditId}`} onClose={() => setSelectedAuditId(null)}>
                     <AuditReportView auditId={selectedAuditId} />
                 </Modal>
             )}
