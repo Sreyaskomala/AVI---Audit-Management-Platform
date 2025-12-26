@@ -4,8 +4,8 @@ import { Audit, AuditStatus, User, Finding, FindingLevel, FindingStatus, UserRol
 export const FSTD_OPTIONS = ['FSTD 1', 'FSTD 2', 'FSTD 3 (Demo)'];
 
 export const mockUsers: User[] = [
-  { id: 1, name: 'Sreyas', role: UserRole.Auditor, department: 'Quality', avatarUrl: 'https://i.pravatar.cc/150?u=sreyas' },
-  { id: 2, name: 'John Doe', role: UserRole.Auditee, department: 'Engineering', avatarUrl: 'https://i.pravatar.cc/150?u=john' },
+  { id: 1, name: 'Auditor', role: UserRole.Auditor, department: 'Quality', avatarUrl: 'https://i.pravatar.cc/150?u=sreyas' },
+  { id: 2, name: 'Shiv Shankar Rajendra Pannati', role: UserRole.Auditee, department: 'Engineering', avatarUrl: 'https://i.pravatar.cc/150?u=john' },
   { id: 3, name: 'Jane Smith', role: UserRole.Auditee, department: 'Training', avatarUrl: 'https://i.pravatar.cc/150?u=jane' },
   { id: 4, name: 'Mike Ross', role: UserRole.Auditee, department: 'Flight Ops', avatarUrl: 'https://i.pravatar.cc/150?u=mike' },
 ];
