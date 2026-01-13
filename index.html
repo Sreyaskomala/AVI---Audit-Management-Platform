@@ -36,82 +36,92 @@
     </script>
     <style>
       @media print {
-        /* Reset and clean up browser defaults */
+        /* Reset page margins and size */
         @page {
           margin: 1.5cm;
           size: auto;
         }
 
+        /* Ensure body allows content to flow across pages */
         body {
           background-color: white !important;
           color: black !important;
-          font-size: 12pt;
           width: 100%;
           height: auto !important;
           overflow: visible !important;
+          visibility: hidden; /* Hide everything by default */
         }
 
-        /* Hide everything by default */
-        body > *, #root, .flex, .h-screen, aside, header, nav, .no-print {
-          display: none !important;
+        /* Explicitly make the report and its necessary parents visible */
+        #root, 
+        .modal-wrapper, 
+        .modal-wrapper > div,
+        .modal-content-area,
+        #audit-report-content,
+        #audit-report-content * {
+          visibility: visible !important;
         }
 
-        /* Specifically show the modal wrapper and the report content */
+        /* Reposition the report to start at the top of the print page */
         .modal-wrapper {
+          position: absolute !important;
+          left: 0 !important;
+          top: 0 !important;
+          width: 100% !important;
+          height: auto !important;
+          display: block !important;
+          background: white !important;
+          z-index: 9999;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+
+        /* Remove all fixed dimensions, shadows, and borders from the modal containers */
+        #root, 
+        .h-screen, 
+        .flex, 
+        main, 
+        .modal-content-area, 
+        .modal-wrapper > div {
+          height: auto !important;
+          max-height: none !important;
+          overflow: visible !important;
           display: block !important;
           position: static !important;
-          visibility: visible !important;
-          overflow: visible !important;
-          height: auto !important;
-          width: 100% !important;
-          background: none !important;
-          padding: 0 !important;
-        }
-
-        /* Expand the modal container to full page width/height */
-        .modal-wrapper > div {
-          display: block !important;
-          visibility: visible !important;
           max-width: none !important;
           width: 100% !important;
           margin: 0 !important;
+          padding: 0 !important;
           box-shadow: none !important;
           border: none !important;
-          position: static !important;
-          height: auto !important;
-          overflow: visible !important;
         }
 
-        /* Ensure the actual report content is visible and takes full width */
-        #audit-report-content, #audit-report-content * {
-          display: block !important;
-          visibility: visible !important;
-          overflow: visible !important;
+        /* Hide elements that definitely shouldn't be printed */
+        .no-print, 
+        .no-print *, 
+        button,
+        nav,
+        aside,
+        header {
+          display: none !important;
+          visibility: hidden !important;
         }
 
-        /* Maintain grid and flex layout where useful for the report body */
-        #audit-report-content .grid {
-          display: grid !important;
-        }
+        /* Re-enable layout for internal report parts */
         #audit-report-content .flex {
           display: flex !important;
         }
-
-        .modal-content-area {
-          overflow: visible !important;
-          max-height: none !important;
-          padding: 0 !important;
-          display: block !important;
-          height: auto !important;
+        #audit-report-content .grid {
+          display: grid !important;
         }
 
-        /* Fix backgrounds for elements that should stay colored (e.g., status badges) */
+        /* Force high-quality color printing for badges and charts */
         .print-bg-force {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
         
-        /* Prevent cards from breaking across pages awkwardly */
+        /* Prevent content from being cut in half mid-page */
         .break-inside-avoid {
           break-inside: avoid !important;
           page-break-inside: avoid !important;
