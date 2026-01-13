@@ -36,29 +36,85 @@
     </script>
     <style>
       @media print {
-        body {
-          background-color: white;
+        /* Reset and clean up browser defaults */
+        @page {
+          margin: 1.5cm;
+          size: auto;
         }
+
+        body {
+          background-color: white !important;
+          color: black !important;
+          font-size: 12pt;
+          width: 100%;
+          height: auto !important;
+          overflow: visible !important;
+        }
+
+        /* Hide everything by default */
+        body > *, #root, .flex, .h-screen, aside, header, nav, .no-print {
+          display: none !important;
+        }
+
+        /* Specifically show the modal wrapper and the report content */
+        .modal-wrapper {
+          display: block !important;
+          position: static !important;
+          visibility: visible !important;
+          overflow: visible !important;
+          height: auto !important;
+          width: 100% !important;
+          background: none !important;
+          padding: 0 !important;
+        }
+
+        /* Expand the modal container to full page width/height */
+        .modal-wrapper > div {
+          display: block !important;
+          visibility: visible !important;
+          max-width: none !important;
+          width: 100% !important;
+          margin: 0 !important;
+          box-shadow: none !important;
+          border: none !important;
+          position: static !important;
+          height: auto !important;
+          overflow: visible !important;
+        }
+
+        /* Ensure the actual report content is visible and takes full width */
+        #audit-report-content, #audit-report-content * {
+          display: block !important;
+          visibility: visible !important;
+          overflow: visible !important;
+        }
+
+        /* Maintain grid and flex layout where useful for the report body */
+        #audit-report-content .grid {
+          display: grid !important;
+        }
+        #audit-report-content .flex {
+          display: flex !important;
+        }
+
         .modal-content-area {
           overflow: visible !important;
           max-height: none !important;
           padding: 0 !important;
+          display: block !important;
+          height: auto !important;
         }
-        .modal-wrapper, .modal-wrapper * {
-          visibility: hidden;
+
+        /* Fix backgrounds for elements that should stay colored (e.g., status badges) */
+        .print-bg-force {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
-        #audit-report-content, #audit-report-content * {
-          visibility: visible;
-        }
-        #audit-report-content {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 100%;
-          padding: 1rem;
-        }
-        .no-print {
-          display: none !important;
+        
+        /* Prevent cards from breaking across pages awkwardly */
+        .break-inside-avoid {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
         }
       }
     </style>

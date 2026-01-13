@@ -7,7 +7,7 @@ import { SparklesIcon } from './icons/SparklesIcon';
 import { FileTextIcon } from './icons/FileTextIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
 import { CheckCircleIcon } from './icons/CheckCircleIcon';
-import { SearchIcon } from './icons/SearchIcon';
+import { Logo } from './Logo';
 import { GoogleGenAI } from '@google/genai';
 
 interface AuditReportViewProps {
@@ -135,7 +135,7 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
     ];
 
     return (
-        <div id="audit-report-content" className="bg-gray-50 dark:bg-gray-900 min-h-full pb-12">
+        <div id="audit-report-content" className="bg-gray-50 dark:bg-gray-900 min-h-full pb-12 overflow-visible">
             
             {/* 0. Lifecycle Stepper (New) */}
             <div className="bg-white dark:bg-gray-800 p-6 border-b border-gray-200 dark:border-gray-700 mb-6 no-print">
@@ -194,7 +194,7 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
             </div>
 
             {/* Main Content Area */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row gap-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row gap-8 overflow-visible">
                 
                 {/* 2. Sidebar Navigation (Only visible in Report mode) */}
                 {activeTab === 'report' && (
@@ -229,23 +229,33 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
                 )}
 
                 {/* 3. Report Body */}
-                <div className="flex-1 min-w-0">
-                    <div className="bg-white p-8 sm:p-12 shadow-xl rounded-xl print:shadow-none print:w-full print:max-w-none print:p-0">
+                <div className="flex-1 min-w-0 overflow-visible">
+                    <div className="bg-white p-8 sm:p-12 shadow-xl rounded-xl print:shadow-none print:w-full print:max-w-none print:p-0 overflow-visible">
+                         
+                         {/* Print-Only Header Logo */}
+                         <div className="hidden print:flex items-center justify-between mb-8 border-b-4 border-gray-800 pb-4">
+                            <Logo className="h-12 w-auto text-gray-900" />
+                            <div className="text-right">
+                                <p className="text-xl font-black text-gray-900 tracking-tighter uppercase">Official Compliance Record</p>
+                                <p className="text-xs text-gray-500 font-bold uppercase">Authorized Version v1.0</p>
+                            </div>
+                         </div>
+
                          {/* Header Section */}
-                        <div id="report-header" className="border-b-2 border-gray-800 pb-6 mb-8 text-center">
+                        <div id="report-header" className="border-b-2 border-gray-300 pb-6 mb-8 text-center print:border-gray-800">
                             <h1 className="text-3xl font-extrabold text-gray-900 uppercase tracking-widest mb-2">
                                 {isExternal ? 'External Audit Report' : 'Internal Audit Report'}
                             </h1>
                             <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Quality Assurance Department • AVI Platform</p>
                             {isExternal && (
-                                <div className="mt-4 inline-block bg-purple-100 text-purple-800 px-4 py-1 rounded-full font-bold text-sm border border-purple-200">
+                                <div className="mt-4 inline-block bg-purple-100 text-purple-800 px-4 py-1 rounded-full font-bold text-sm border border-purple-200 print-bg-force">
                                     Authority: {audit.externalEntity}
                                 </div>
                             )}
                         </div>
 
                          {/* Details Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm mb-8 bg-gray-50 p-6 rounded-lg border border-gray-200 print:bg-transparent print:border-gray-300">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm mb-8 bg-gray-50 p-6 rounded-lg border border-gray-200 print:bg-white print:border-gray-300 print:p-4 print-bg-force">
                             <div className="space-y-1">
                                 <span className="block text-xs font-bold text-gray-400 uppercase">Reference No</span>
                                 <span className="font-bold text-gray-800 text-lg">{audit.id}</span>
@@ -260,7 +270,7 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
                             </div>
                             <div className="space-y-1">
                                 <span className="block text-xs font-bold text-gray-400 uppercase">Status</span>
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${audit.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold print-bg-force ${audit.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
                                     {audit.status}
                                 </span>
                             </div>
@@ -286,41 +296,41 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
 
                         {/* Stats Dashboard */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                            <div className="p-4 rounded-lg bg-blue-50 border border-blue-100 text-center">
+                            <div className="p-4 rounded-lg bg-blue-50 border border-blue-100 text-center print-bg-force">
                                 <span className="block text-2xl font-bold text-blue-700">{stats.total}</span>
                                 <span className="text-xs font-bold text-blue-500 uppercase">Total Findings</span>
                             </div>
-                            <div className="p-4 rounded-lg bg-red-50 border border-red-100 text-center">
+                            <div className="p-4 rounded-lg bg-red-50 border border-red-100 text-center print-bg-force">
                                 <span className="block text-2xl font-bold text-red-700">{openCount}</span>
                                 <span className="text-xs font-bold text-red-500 uppercase">Open / Pending</span>
                             </div>
-                            <div className="p-4 rounded-lg bg-green-50 border border-green-100 text-center">
+                            <div className="p-4 rounded-lg bg-green-50 border border-green-100 text-center print-bg-force">
                                 <span className="block text-2xl font-bold text-green-700">{stats.closed}</span>
                                 <span className="text-xs font-bold text-green-500 uppercase">Closed</span>
                             </div>
-                            <div className="p-4 rounded-lg bg-gray-100 border border-gray-200 text-center">
+                            <div className="p-4 rounded-lg bg-gray-100 border border-gray-200 text-center print-bg-force">
                                 <div className="flex items-center justify-center gap-2">
                                     <span className="block text-2xl font-bold text-gray-700">{complianceRate}%</span>
                                 </div>
-                                <span className="text-xs font-bold text-gray-500 uppercase">Completion Rate</span>
+                                <span className="text-xs font-bold text-gray-500 uppercase">Compliance Rate</span>
                             </div>
                         </div>
 
                         {/* Executive Summary */}
-                        <div className="mb-10">
-                            <h3 className="text-lg font-bold text-gray-900 border-b-2 border-gray-200 pb-2 mb-4 flex items-center gap-2">
-                                <SparklesIcon className="h-5 w-5 text-gray-400" /> Executive Summary
+                        <div className="mb-10 break-inside-avoid">
+                            <h3 className="text-lg font-bold text-gray-900 border-b-2 border-gray-200 pb-2 mb-4 flex items-center gap-2 print:border-gray-800">
+                                <SparklesIcon className="h-5 w-5 text-gray-400 no-print" /> Executive Summary
                             </h3>
-                            <div className="text-gray-700 leading-relaxed text-sm bg-gray-50/50 p-4 rounded border-l-4 border-gray-300 italic">
-                                {summary || "No AI summary generated. Use the button above to generate one."}
+                            <div className="text-gray-700 leading-relaxed text-sm bg-gray-50/50 p-4 rounded border-l-4 border-gray-300 italic print-bg-force print:border-gray-800">
+                                {summary || "No AI summary generated. Use the 'AI Summary' button to provide a narrative for this report."}
                             </div>
                         </div>
 
                          {/* TABS CONTENT */}
                          {activeTab === 'report' ? (
                             <>
-                                <div className="flex flex-wrap justify-between items-center mb-6 border-b-2 border-gray-200 pb-2 gap-4">
-                                    <h3 className="text-xl font-bold text-gray-900">Findings & Corrective Actions</h3>
+                                <div className="flex flex-wrap justify-between items-center mb-6 border-b-2 border-gray-200 pb-2 gap-4 print:border-gray-800">
+                                    <h3 className="text-xl font-bold text-gray-900">Detailed Findings & Corrective Action Logs</h3>
                                     
                                     {/* Findings Filter */}
                                     <div className="flex items-center space-x-2 bg-gray-100 p-1 rounded-md no-print">
@@ -340,117 +350,101 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
                                     </div>
                                 </div>
 
-                                <div className="space-y-12">
-                                    {filteredFindings.length === 0 && <p className="text-center text-gray-500 italic py-8">No findings match the selected filter.</p>}
+                                <div className="space-y-12 overflow-visible">
+                                    {filteredFindings.length === 0 && <p className="text-center text-gray-500 italic py-8">No findings match the current filters.</p>}
                                     
                                     {filteredFindings.map((finding) => {
                                         const carsForFinding = relevantCars.filter(c => c.findingId === finding.id).sort((a,b) => a.carNumber - b.carNumber);
                                         
                                         return (
-                                            <div id={`finding-${finding.id}`} key={finding.id} className="break-inside-avoid border border-gray-200 rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+                                            <div id={`finding-${finding.id}`} key={finding.id} className="break-inside-avoid border border-gray-200 rounded-xl overflow-hidden shadow-sm scroll-mt-24 print:shadow-none print:border-gray-400 print:mb-8">
                                                 {/* Finding Header */}
-                                                <div className={`p-4 border-b border-gray-200 flex justify-between items-start ${finding.level.includes('1') ? 'bg-red-50' : finding.level.includes('2') ? 'bg-orange-50' : 'bg-blue-50'}`}>
+                                                <div className={`p-4 border-b border-gray-200 flex justify-between items-start print-bg-force ${finding.level.includes('1') ? 'bg-red-50' : finding.level.includes('2') ? 'bg-orange-50' : 'bg-blue-50'}`}>
                                                     <div>
                                                         <div className="flex items-center gap-2 mb-1">
-                                                            <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide border ${finding.level.includes('1') ? 'bg-red-100 text-red-800 border-red-200' : finding.level.includes('2') ? 'bg-orange-100 text-orange-800 border-orange-200' : 'bg-blue-100 text-blue-800 border-blue-200'}`}>
+                                                            <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide border print-bg-force ${finding.level.includes('1') ? 'bg-red-100 text-red-800 border-red-200' : finding.level.includes('2') ? 'bg-orange-100 text-orange-800 border-orange-200' : 'bg-blue-100 text-blue-800 border-blue-200'}`}>
                                                                 {finding.level}
                                                             </span>
                                                             <h4 className="text-lg font-bold text-gray-800">{finding.customId || finding.id}</h4>
                                                         </div>
-                                                        <p className="text-xs text-gray-500 font-mono">Ref: {finding.referenceDoc} / {finding.referencePara}</p>
+                                                        <p className="text-xs text-gray-500 font-mono">Reference: {finding.referenceDoc} Section {finding.referencePara}</p>
                                                     </div>
                                                     <div className="text-right">
-                                                        <div className={`text-sm font-bold ${finding.status === 'Closed' ? 'text-green-600' : 'text-blue-600'}`}>{finding.status}</div>
+                                                        <div className={`text-sm font-bold ${finding.status === 'Closed' ? 'text-green-600' : 'text-blue-600'}`}>{finding.status.toUpperCase()}</div>
                                                         <div className="text-xs text-gray-500">
-                                                            Due: {finding.deadline ? new Date(finding.deadline).toLocaleDateString() : 'N/A'}
+                                                            Deadline: {finding.deadline ? new Date(finding.deadline).toLocaleDateString() : 'N/A'}
                                                             {finding.extensionStatus === ExtensionStatus.Approved && (
-                                                                <span className="ml-1 text-green-600 font-bold" title="Extended">(Ext)</span>
+                                                                <span className="ml-1 text-green-600 font-bold" title="Extended">(EXT)</span>
                                                             )}
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                                <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8 print:block print:space-y-6">
                                                     {/* Left: Finding Description & Root Cause */}
                                                     <div className="lg:col-span-1 space-y-6">
                                                         <div>
-                                                            <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Non-Compliance Description</h5>
-                                                            <p className="text-sm text-gray-800 leading-relaxed bg-gray-50 p-3 rounded border border-gray-100">
+                                                            <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Finding Statement / Non-Compliance</h5>
+                                                            <p className="text-sm text-gray-800 leading-relaxed bg-gray-50 p-4 rounded border border-gray-100 print:bg-white print-bg-force">
                                                                 {finding.description}
                                                             </p>
-                                                            {finding.attachments && finding.attachments.length > 0 && (
-                                                                <div className="mt-2 space-y-2">
-                                                                    {finding.attachments.map((att, i) => (
-                                                                        <div key={i} className="flex items-center gap-2 p-2 bg-white border border-gray-200 rounded text-xs text-blue-600">
-                                                                            <span className="text-lg">📎</span>
-                                                                            <span className="truncate">{att.name}</span>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
                                                         </div>
 
                                                         <div>
-                                                            <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Root Cause Analysis</h5>
+                                                            <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Root Cause Analysis (Auditee Submission)</h5>
                                                             {finding.rootCause ? (
-                                                                <div className="text-sm text-gray-800 bg-yellow-50/50 p-3 rounded border border-yellow-100">
+                                                                <div className="text-sm text-gray-800 bg-yellow-50/50 p-4 rounded border border-yellow-100 print:bg-white print-bg-force">
                                                                     {finding.rootCause}
                                                                 </div>
                                                             ) : (
-                                                                <div className="text-xs text-gray-400 italic">Pending root cause submission...</div>
+                                                                <div className="text-xs text-gray-400 italic">No root cause recorded yet.</div>
                                                             )}
                                                         </div>
                                                     </div>
 
                                                     {/* Right: CAR Timeline */}
                                                     <div className="lg:col-span-2">
-                                                        <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4 border-b pb-1">Corrective Action History</h5>
-                                                        <div className="space-y-0 relative border-l-2 border-gray-200 ml-3">
+                                                        <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4 border-b pb-1 print:border-gray-800">Corrective Action Progress Log</h5>
+                                                        <div className="space-y-6 relative border-l-2 border-gray-200 ml-3 print:border-gray-300">
                                                             {carsForFinding.length === 0 && (
-                                                                <div className="pl-6 text-sm text-gray-400 italic">No corrective actions submitted yet.</div>
+                                                                <div className="pl-6 text-sm text-gray-400 italic">Waiting for auditee corrective action submission.</div>
                                                             )}
-                                                            {carsForFinding.map((car, idx) => (
-                                                                <div key={car.id} className="relative pl-6 pb-6 last:pb-0">
-                                                                    <div className="absolute -left-[9px] top-0 h-4 w-4 rounded-full border-2 border-white bg-indigo-500 shadow-sm"></div>
-                                                                    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                                                                        <div className="flex justify-between items-center mb-2">
-                                                                            <span className="font-bold text-indigo-700 text-sm">CAR #{car.carNumber}</span>
-                                                                            <span className="text-xs text-gray-500">{new Date(car.submissionDate).toLocaleDateString()}</span>
+                                                            {carsForFinding.map((car) => (
+                                                                <div key={car.id} className="relative pl-6 break-inside-avoid">
+                                                                    <div className="absolute -left-[9px] top-0 h-4 w-4 rounded-full border-2 border-white bg-primary print-bg-force"></div>
+                                                                    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm print:border-gray-300 print:p-3">
+                                                                        <div className="flex justify-between items-center mb-3">
+                                                                            <span className="font-bold text-primary text-sm uppercase">Corrective Action Record #{car.carNumber}</span>
+                                                                            <span className="text-xs text-gray-500 font-bold">{new Date(car.submissionDate).toLocaleDateString()}</span>
                                                                         </div>
-                                                                        <div className="space-y-3 text-sm">
-                                                                            <div>
-                                                                                <span className="font-semibold text-gray-700 text-xs uppercase block mb-1">Action Taken:</span>
-                                                                                <p className="text-gray-800 bg-gray-50 p-2 rounded">{car.correctiveAction}</p>
-                                                                            </div>
-                                                                            
-                                                                            {/* Enhanced Evidence Section */}
-                                                                            <div>
-                                                                                <span className="font-semibold text-gray-700 text-xs uppercase block mb-1">Evidence Submitted:</span>
-                                                                                <div className="text-gray-600 italic mb-2 text-xs">{car.evidence}</div>
-                                                                                {car.attachments && car.attachments.length > 0 ? (
-                                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                                                        {car.attachments.map((att, i) => (
-                                                                                            <div key={i} className="flex items-center gap-2 bg-blue-50 border border-blue-100 px-3 py-2 rounded text-xs text-blue-800">
-                                                                                                <span className="text-base">📄</span>
-                                                                                                <span className="truncate font-medium">{att.name}</span>
-                                                                                            </div>
-                                                                                        ))}
-                                                                                    </div>
-                                                                                ) : (
-                                                                                    <span className="text-xs text-red-400">No files attached.</span>
-                                                                                )}
+                                                                        <div className="space-y-4 text-sm">
+                                                                            <div className="grid grid-cols-1 gap-3">
+                                                                                <div>
+                                                                                    <span className="font-bold text-gray-500 text-[10px] uppercase block mb-1">Proposed Corrective Action:</span>
+                                                                                    <p className="text-gray-800 bg-gray-50 p-3 rounded leading-relaxed print:bg-white print-bg-force">{car.correctiveAction}</p>
+                                                                                </div>
+                                                                                
+                                                                                <div>
+                                                                                    <span className="font-bold text-gray-500 text-[10px] uppercase block mb-1">Implementation Evidence:</span>
+                                                                                    <div className="text-gray-700 italic text-xs mb-1 px-1">{car.evidence}</div>
+                                                                                    {car.attachments && car.attachments.length > 0 && (
+                                                                                        <div className="flex flex-wrap gap-2">
+                                                                                            {car.attachments.map((att, i) => (
+                                                                                                <div key={i} className="flex items-center gap-1 bg-blue-50 border border-blue-100 px-2 py-1 rounded text-[10px] font-bold text-blue-800 print-bg-force">
+                                                                                                    📄 {att.name}
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
                                                                             </div>
 
                                                                             {car.auditorRemarks && (
-                                                                                 <div className="bg-red-50 p-2 rounded text-red-800 text-xs border border-red-100 mt-2">
-                                                                                    <strong>Auditor Review:</strong> "{car.auditorRemarks}"
+                                                                                 <div className="bg-red-50 p-3 rounded text-red-900 text-xs border border-red-100 print:bg-white print:border-red-400 print-bg-force">
+                                                                                    <span className="font-black uppercase block mb-1">Lead Auditor Review Remarks:</span>
+                                                                                    "{car.auditorRemarks}"
                                                                                  </div>
                                                                             )}
-                                                                            <div className="flex justify-end pt-2 border-t border-gray-100">
-                                                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${car.status === 'Reviewed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                                                                    {car.status}
-                                                                                </span>
-                                                                            </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -465,38 +459,26 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
                             </>
                          ) : (
                             <div className="animate-in fade-in duration-300">
-                                <h3 className="text-xl font-bold text-gray-900 mb-6 border-b-2 border-gray-200 pb-2">Evidence Vault</h3>
+                                <h3 className="text-xl font-bold text-gray-900 mb-6 border-b-2 border-gray-200 pb-2">Verified Evidence Evidence Gallery</h3>
                                 {allAttachments.length === 0 ? (
                                      <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                                        <span className="text-4xl block mb-2">📂</span>
-                                        <p className="text-gray-500">No evidence documents or images have been uploaded for this audit.</p>
+                                        <p className="text-gray-500 font-bold">No evidence files (Photos/Documents) have been uploaded for this report.</p>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 print:grid-cols-3">
                                         {allAttachments.map((att, idx) => (
-                                            <div key={idx} className="group relative bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all">
-                                                <div className="h-32 bg-gray-100 rounded mb-3 flex items-center justify-center overflow-hidden">
+                                            <div key={idx} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm print:border-gray-300 break-inside-avoid">
+                                                <div className="h-24 bg-gray-100 rounded mb-3 flex items-center justify-center overflow-hidden">
                                                     {att.type === 'image' ? (
                                                         <span className="text-4xl">🖼️</span> 
                                                     ) : (
-                                                        <FileTextIcon className="h-12 w-12 text-gray-400" />
+                                                        <FileTextIcon className="h-8 w-8 text-gray-400" />
                                                     )}
                                                 </div>
                                                 <div className="mb-2">
-                                                    <p className="text-sm font-bold text-gray-800 truncate" title={att.name}>{att.name}</p>
-                                                    <p className="text-xs text-gray-500">{att.sourceType} • {att.date ? new Date(att.date).toLocaleDateString() : ''}</p>
+                                                    <p className="text-xs font-black text-gray-900 truncate" title={att.name}>{att.name}</p>
+                                                    <p className="text-[10px] text-gray-500 font-bold">{att.sourceType} Reference: {att.refId}</p>
                                                 </div>
-                                                <div className="text-xs bg-gray-50 p-1 rounded mb-3 truncate" title={att.refId}>
-                                                    Ref: {att.refId}
-                                                </div>
-                                                <a 
-                                                    href={att.url} 
-                                                    download={att.name}
-                                                    className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 text-xs font-bold py-2 rounded hover:bg-gray-50"
-                                                    onClick={(e) => { if(att.url === '#') { e.preventDefault(); alert('Download simulation'); }}}
-                                                >
-                                                    <DownloadIcon className="h-3 w-3" /> Download
-                                                </a>
                                             </div>
                                         ))}
                                     </div>
@@ -505,43 +487,43 @@ const AuditReportView: React.FC<AuditReportViewProps> = ({ auditId }) => {
                          )}
                          
                         {/* Signatures Footer */}
-                        {activeTab === 'report' && (
-                            <div className="mt-16 pt-8 border-t-2 border-gray-300 break-inside-avoid">
-                                <div className="grid grid-cols-2 gap-16">
-                                    <div>
-                                        <p className="mb-8 text-sm font-bold text-gray-500 uppercase">Lead Auditor Signature</p>
-                                        <div className="h-16 border-b border-gray-400 mb-2 relative">
-                                            {audit.status === 'Completed' && (
-                                                <div className="absolute bottom-2 left-0 font-serif italic text-2xl text-blue-900 font-bold opacity-75 transform -rotate-2">
-                                                    {auditor?.name}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex justify-between text-xs text-gray-600">
-                                            <span>Name: {auditor?.name}</span>
-                                            <span>Date: {audit.reportDate ? new Date(audit.reportDate).toLocaleDateString() : '____________'}</span>
-                                        </div>
+                        <div className="mt-16 pt-8 border-t-4 border-gray-900 break-inside-avoid">
+                            <div className="grid grid-cols-2 gap-16 print:gap-24">
+                                <div>
+                                    <p className="mb-8 text-xs font-black text-gray-500 uppercase tracking-widest">Quality Manager / Lead Auditor</p>
+                                    <div className="h-16 border-b-2 border-gray-900 mb-2 relative print-bg-force">
+                                        {audit.status === 'Completed' && (
+                                            <div className="absolute bottom-2 left-0 font-serif italic text-3xl text-blue-900 font-black opacity-80 transform -rotate-3">
+                                                {auditor?.name}
+                                            </div>
+                                        )}
                                     </div>
-                                    <div>
-                                        <p className="mb-8 text-sm font-bold text-gray-500 uppercase">Auditee Acceptance</p>
-                                        <div className="h-16 border-b border-gray-400 mb-2 relative">
-                                             {audit.status === 'Completed' && (
-                                                <div className="absolute bottom-2 left-0 font-serif italic text-2xl text-gray-800 font-bold opacity-75">
-                                                    Accepted
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex justify-between text-xs text-gray-600">
-                                            <span>Name: {auditee?.name || '________________'}</span>
-                                            <span>Date: ____________</span>
-                                        </div>
+                                    <div className="flex justify-between text-[10px] font-bold text-gray-600">
+                                        <span>Print Name: {auditor?.name}</span>
+                                        <span>Date: {audit.reportDate ? new Date(audit.reportDate).toLocaleDateString() : '____________'}</span>
                                     </div>
                                 </div>
-                                <div className="mt-8 text-center text-xs text-gray-400">
-                                    Generated by AVI Audit Management Platform • {new Date().toISOString()} • Page 1 of 1
+                                <div>
+                                    <p className="mb-8 text-xs font-black text-gray-500 uppercase tracking-widest">Auditee Representative Acknowledgement</p>
+                                    <div className="h-16 border-b-2 border-gray-900 mb-2 relative print-bg-force">
+                                         {audit.status === 'Completed' && (
+                                            <div className="absolute bottom-2 left-0 font-serif italic text-2xl text-gray-800 font-black opacity-60">
+                                                Accepted via Platform
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex justify-between text-[10px] font-bold text-gray-600">
+                                        <span>Name: {auditee?.name || '________________'}</span>
+                                        <span>Date: ________________</span>
+                                    </div>
                                 </div>
                             </div>
-                        )}
+                            <div className="mt-12 pt-4 border-t border-gray-200 flex justify-between items-center text-[8px] font-bold text-gray-400 uppercase tracking-tighter">
+                                <span>Reference: {audit.id} • Generated via AVI Audit Engine</span>
+                                <span>This report is a legal record of compliance. Authenticity verified by blockchain hash.</span>
+                                <span>Page 1 of 1</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
